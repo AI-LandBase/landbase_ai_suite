@@ -34,4 +34,9 @@
     background-color: var(--color-gray-950);
     color: var(--color-gray-100);
   }
+
+  input, select, textarea {
+    background-color: var(--color-gray-800);
+    color: var(--color-gray-100);
+  }
 }
