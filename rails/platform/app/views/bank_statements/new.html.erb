@@ -5,39 +5,39 @@
 
   <form data-bank-pdf-upload-target="form" data-action="submit->bank-pdf-upload#submit" class="space-y-6">
     <div>
-      <label for="client_code" class="block text-sm font-medium text-gray-700 mb-1">クライアントコード <span class="text-red-500">*</span></label>
+      <label for="client_code" class="block text-sm font-medium text-gray-300 mb-1">クライアントコード <span class="text-red-400">*</span></label>
       <input type="text" name="client_code" id="client_code" required
              value="<%= params[:client_code] %>"
-             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border"
+             class="w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border"
              data-bank-pdf-upload-target="clientCode">
     </div>
 
     <!-- ドラッグ&ドロップエリア -->
-    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors"
+    <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-teal-500 transition-colors"
          data-bank-pdf-upload-target="dropZone"
          data-action="dragover->bank-pdf-upload#dragOver dragenter->bank-pdf-upload#dragEnter dragleave->bank-pdf-upload#dragLeave drop->bank-pdf-upload#drop">
       <input type="file" name="pdf" accept="application/pdf"
              class="hidden" data-bank-pdf-upload-target="fileInput" data-action="change->bank-pdf-upload#fileSelected">
       <div class="space-y-2">
-        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+        <svg class="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
           <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <p class="text-gray-600">
+        <p class="text-gray-400">
           PDFファイルをドラッグ&ドロップ、または
-          <button type="button" class="text-blue-600 hover:text-blue-500 font-medium" data-action="click->bank-pdf-upload#openFileDialog">
+          <button type="button" class="text-teal-400 hover:text-teal-300 font-medium" data-action="click->bank-pdf-upload#openFileDialog">
             ファイルを選択
           </button>
         </p>
-        <p class="text-xs text-gray-500">銀行入出金明細PDF（20MB以下）</p>
+        <p class="text-xs text-gray-400">銀行入出金明細PDF（20MB以下）</p>
       </div>
     </div>
 
     <!-- ファイル名表示 -->
-    <p class="text-sm text-gray-700 hidden" data-bank-pdf-upload-target="fileName"></p>
+    <p class="text-sm text-gray-300 hidden" data-bank-pdf-upload-target="fileName"></p>
 
     <div class="flex items-center justify-end">
       <button type="submit" data-bank-pdf-upload-target="submitButton"
-              class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              class="bg-teal-600 text-white px-6 py-2 rounded-md hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               disabled>
         仕訳変換を実行
       </button>
@@ -46,12 +46,12 @@
 
   <!-- ローディング -->
   <div data-bank-pdf-upload-target="loading" class="hidden mt-8 text-center">
-    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-    <p class="mt-2 text-gray-600">アップロード中...</p>
+    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+    <p class="mt-2 text-gray-400">アップロード中...</p>
   </div>
 
   <!-- エラー表示 -->
-  <div data-bank-pdf-upload-target="error" class="hidden mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-    <p class="text-red-800" data-bank-pdf-upload-target="errorMessage"></p>
+  <div data-bank-pdf-upload-target="error" class="hidden mt-6 bg-red-950 border border-red-700 rounded-lg p-4">
+    <p class="text-red-300" data-bank-pdf-upload-target="errorMessage"></p>
   </div>
 </div>

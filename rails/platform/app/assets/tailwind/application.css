@@ -2,38 +2,18 @@
 @source "../../views/";
 
 @theme {
-  /* Surface layers — dark teal tint */
-  --color-bg-base: #0c1219;
-  --color-bg-surface: #131c25;
-  --color-bg-elevated: #1b2733;
-  --color-bg-hover: #243242;
-
-  /* Borders */
-  --color-border: #243242;
-  --color-border-subtle: #1b2733;
-
-  /* Text */
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #cbd5e1;
-  --color-text-tertiary: #94a3b8;
-  --color-text-muted: #64748b;
-
-  /* Accent — teal (from ai-landbase.jp) */
-  --color-accent-300: #5eead4;
-  --color-accent-400: #2dd4bf;
-  --color-accent-500: #14b8a6;
-  --color-accent-600: #0d9488;
-
-  /* CTA — warm gold */
-  --color-cta-400: #fbbf24;
-  --color-cta-500: #f59e0b;
-  --color-cta-600: #d97706;
-
-  /* Status */
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #38bdf8;
+  /* Gray — teal-tinted dark palette (standard ordering preserved) */
+  --color-gray-50:  #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #3a4f65;
+  --color-gray-700: #243242;
+  --color-gray-800: #1b2733;
+  --color-gray-900: #131c25;
+  --color-gray-950: #0c1219;
 
   /* Spacing scale aliases */
   --spacing-btn-x: 1rem;       /* px-4 */
@@ -47,4 +27,11 @@
   --spacing-badge-sm-y: 0.125rem;/* py-0.5 */
   --spacing-badge-md-x: 0.75rem; /* px-3 */
   --spacing-badge-md-y: 0.25rem; /* py-1 */
+}
+
+@layer base {
+  body {
+    background-color: var(--color-gray-950);
+    color: var(--color-gray-100);
+  }
 }

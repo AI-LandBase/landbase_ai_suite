@@ -19,23 +19,23 @@
 
   <%= form_with(model: @entry, url: journal_entry_path(@entry, client_code: @client_code), method: :patch, class: "space-y-6") do |f| %>
     <!-- 基本情報（読み取り専用） -->
-    <div class="bg-gray-50 shadow rounded-lg p-6">
+    <div class="bg-gray-800 shadow rounded-lg p-6">
       <h2 class="text-lg font-semibold mb-4">基本情報（読み取り専用）</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div>
-          <span class="text-gray-500">取引日:</span>
+          <span class="text-gray-400">取引日:</span>
           <span class="font-medium ml-1"><%= @entry.date %></span>
         </div>
         <div>
-          <span class="text-gray-500">取引No:</span>
+          <span class="text-gray-400">取引No:</span>
           <span class="font-medium ml-1"><%= @entry.transaction_no %></span>
         </div>
         <div>
-          <span class="text-gray-500">ソース:</span>
+          <span class="text-gray-400">ソース:</span>
           <span class="font-medium ml-1"><%= @entry.source_type %></span>
         </div>
         <div>
-          <span class="text-gray-500">期間:</span>
+          <span class="text-gray-400">期間:</span>
           <span class="font-medium ml-1"><%= @entry.source_period %></span>
         </div>
       </div>
@@ -44,39 +44,39 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- 借方 -->
       <%= render "shared/card" do %>
-        <h2 class="text-lg font-semibold mb-4 text-blue-700">借方</h2>
+        <h2 class="text-lg font-semibold mb-4 text-teal-400">借方</h2>
         <% if debit %>
           <%= f.fields_for :journal_entry_lines, debit do |lf| %>
             <%= lf.hidden_field :id %>
             <%= lf.hidden_field :side, value: "debit" %>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">勘定科目</label>
-                <%= lf.text_field :account, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">勘定科目</label>
+                <%= lf.text_field :account, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">補助科目</label>
-                <%= lf.text_field :sub_account, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">補助科目</label>
+                <%= lf.text_field :sub_account, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">部門</label>
-                <%= lf.text_field :department, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">部門</label>
+                <%= lf.text_field :department, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">取引先</label>
-                <%= lf.text_field :partner, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">取引先</label>
+                <%= lf.text_field :partner, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">税区分</label>
-                <%= lf.text_field :tax_category, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">税区分</label>
+                <%= lf.text_field :tax_category, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">インボイス</label>
-                <%= lf.text_field :invoice, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">インボイス</label>
+                <%= lf.text_field :invoice, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">金額</label>
-                <%= lf.number_field :amount, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">金額</label>
+                <%= lf.number_field :amount, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
             </div>
           <% end %>
@@ -92,32 +92,32 @@
             <%= lf.hidden_field :side, value: "credit" %>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">勘定科目</label>
-                <%= lf.text_field :account, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">勘定科目</label>
+                <%= lf.text_field :account, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">補助科目</label>
-                <%= lf.text_field :sub_account, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">補助科目</label>
+                <%= lf.text_field :sub_account, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">部門</label>
-                <%= lf.text_field :department, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">部門</label>
+                <%= lf.text_field :department, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">取引先</label>
-                <%= lf.text_field :partner, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">取引先</label>
+                <%= lf.text_field :partner, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">税区分</label>
-                <%= lf.text_field :tax_category, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">税区分</label>
+                <%= lf.text_field :tax_category, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">インボイス</label>
-                <%= lf.text_field :invoice, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">インボイス</label>
+                <%= lf.text_field :invoice, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">金額</label>
-                <%= lf.number_field :amount, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                <label class="block text-sm font-medium text-gray-300 mb-1">金額</label>
+                <%= lf.number_field :amount, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
               </div>
             </div>
           <% end %>
@@ -130,30 +130,30 @@
       <h2 class="text-lg font-semibold mb-4">その他</h2>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">摘要</label>
-          <%= f.text_field :description, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+          <label class="block text-sm font-medium text-gray-300 mb-1">摘要</label>
+          <%= f.text_field :description, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">カード利用者</label>
-            <%= f.text_field :cardholder, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+            <label class="block text-sm font-medium text-gray-300 mb-1">カード利用者</label>
+            <%= f.text_field :cardholder, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">ステータス</label>
+            <label class="block text-sm font-medium text-gray-300 mb-1">ステータス</label>
             <%= f.select :status, [["OK", "ok"], ["要確認", "review_required"]],
-                  {}, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                  {}, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">メモ</label>
-          <%= f.text_area :memo, rows: 3, class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+          <label class="block text-sm font-medium text-gray-300 mb-1">メモ</label>
+          <%= f.text_area :memo, rows: 3, class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
         </div>
       </div>
     <% end %>
 
     <div class="flex justify-end gap-4">
       <%= render "shared/button", label: "キャンセル", href: journal_entry_path(@entry, client_code: @client_code), variant: :secondary, size: :lg %>
-      <%= f.submit "保存", class: "bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors cursor-pointer" %>
+      <%= f.submit "保存", class: "bg-teal-600 text-white px-6 py-2 rounded-md hover:bg-teal-700 transition-colors cursor-pointer" %>
     </div>
   <% end %>
 </div>

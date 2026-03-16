@@ -6,35 +6,35 @@
   <%= render "shared/card" do %>
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">コード</label>
+        <label class="block text-sm font-medium text-gray-300 mb-1">コード</label>
         <% if @client.persisted? %>
-          <p class="px-3 py-2 bg-gray-100 rounded-md text-sm font-mono text-gray-700"><%= @client.code %></p>
+          <p class="px-3 py-2 bg-gray-700 rounded-md text-sm font-mono text-gray-300"><%= @client.code %></p>
         <% else %>
           <%= f.text_field :code, placeholder: "例: ikigai_stay",
-                class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+                class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
         <% end %>
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">名前</label>
+        <label class="block text-sm font-medium text-gray-300 mb-1">名前</label>
         <%= f.text_field :name, placeholder: "例: イキガイステイ",
-              class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+              class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">業種</label>
+        <label class="block text-sm font-medium text-gray-300 mb-1">業種</label>
         <%= f.select :industry,
               [["飲食業", "restaurant"], ["ホテル", "hotel"], ["ツアー", "tour"]],
               { include_blank: "-- 選択してください --" },
-              class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+              class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">ステータス</label>
+        <label class="block text-sm font-medium text-gray-300 mb-1">ステータス</label>
         <%= f.select :status,
               Client::STATUSES.map { |value, label| [label, value] },
               {},
-              class: "w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border" %>
+              class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
       </div>
     </div>
   <% end %>
@@ -42,6 +42,6 @@
   <div class="flex justify-end gap-4">
     <%= render "shared/button", label: "キャンセル", href: (@client.persisted? ? client_path(@client) : clients_path), variant: :secondary, size: :lg %>
     <%= f.submit (@client.persisted? ? "更新" : "作成"),
-          class: "bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors cursor-pointer" %>
+          class: "bg-teal-600 text-white px-6 py-2 rounded-md hover:bg-teal-700 transition-colors cursor-pointer" %>
   </div>
 <% end %>

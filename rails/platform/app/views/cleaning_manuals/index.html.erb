@@ -8,24 +8,24 @@
 
   <form method="get" class="mb-6 flex gap-4 items-end">
     <div>
-      <label for="client_code" class="block text-sm font-medium text-gray-700 mb-1">クライアントコード</label>
+      <label for="client_code" class="block text-sm font-medium text-gray-300 mb-1">クライアントコード</label>
       <input type="text" name="client_code" id="client_code" value="<%= @client_code %>"
-             class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border">
+             class="rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border">
     </div>
     <%= render "shared/button", label: "検索", variant: :neutral, type: "submit" %>
   </form>
 
   <% if @client_code.blank? %>
-    <p class="text-gray-500">クライアントコードを入力して検索してください。</p>
+    <p class="text-gray-400">クライアントコードを入力して検索してください。</p>
   <% elsif @manuals.empty? %>
-    <p class="text-gray-500">マニュアルが見つかりません。</p>
+    <p class="text-gray-400">マニュアルが見つかりません。</p>
   <% else %>
     <%= render "shared/table", headers: ["ID", "施設名", "部屋タイプ", "ステータス", "作成日", ""] do %>
       <% @manuals.each do |manual| %>
-        <tr class="hover:bg-gray-50">
-          <td class="px-6 py-4 text-sm text-gray-900"><%= manual.id %></td>
-          <td class="px-6 py-4 text-sm text-gray-900"><%= manual.property_name %></td>
-          <td class="px-6 py-4 text-sm text-gray-900"><%= manual.room_type %></td>
+        <tr class="hover:bg-gray-800">
+          <td class="px-6 py-4 text-sm text-gray-100"><%= manual.id %></td>
+          <td class="px-6 py-4 text-sm text-gray-100"><%= manual.property_name %></td>
+          <td class="px-6 py-4 text-sm text-gray-100"><%= manual.room_type %></td>
           <td class="px-6 py-4 text-sm">
             <% if manual.status == "published" %>
               <%= render "shared/badge", label: "公開", variant: :success %>
@@ -33,9 +33,9 @@
               <%= render "shared/badge", label: "下書き", variant: :warning %>
             <% end %>
           </td>
-          <td class="px-6 py-4 text-sm text-gray-500"><%= l(manual.created_at, format: :short) rescue manual.created_at.strftime("%Y/%m/%d %H:%M") %></td>
+          <td class="px-6 py-4 text-sm text-gray-400"><%= l(manual.created_at, format: :short) rescue manual.created_at.strftime("%Y/%m/%d %H:%M") %></td>
           <td class="px-6 py-4 text-sm text-right">
-            <%= link_to "詳細", cleaning_manual_path(manual, client_code: @client_code), class: "text-blue-600 hover:text-blue-800" %>
+            <%= link_to "詳細", cleaning_manual_path(manual, client_code: @client_code), class: "text-teal-400 hover:text-teal-300" %>
           </td>
         </tr>
       <% end %>

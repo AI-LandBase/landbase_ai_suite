@@ -19,12 +19,12 @@
   disabled = local_assigns.fetch(:disabled, false)
 
   variant_classes = {
-    primary:   "bg-blue-600 text-white hover:bg-blue-700",
-    secondary: "bg-gray-200 text-gray-700 hover:bg-gray-300",
+    primary:   "bg-teal-600 text-white hover:bg-teal-700",
+    secondary: "bg-gray-700 text-gray-300 hover:bg-gray-600",
     danger:    "bg-red-600 text-white hover:bg-red-700",
     success:   "bg-green-600 text-white hover:bg-green-700",
-    edit:      "bg-orange-600 text-white hover:bg-orange-700",
-    neutral:   "bg-gray-600 text-white hover:bg-gray-700",
+    edit:      "bg-amber-600 text-white hover:bg-amber-700",
+    neutral:   "bg-gray-600 text-white hover:bg-gray-500",
   }
 
   size_classes = {
@@ -34,7 +34,7 @@
   }
 
   base = "rounded-md transition-colors cursor-pointer"
-  base += " disabled:bg-gray-400 disabled:cursor-not-allowed" if disabled
+  base += " disabled:bg-gray-600 disabled:cursor-not-allowed" if disabled
   css = [base, variant_classes[variant], size_classes[size], local_assigns[:class]].compact.join(" ")
 %>
 <% if local_assigns[:href] %>
