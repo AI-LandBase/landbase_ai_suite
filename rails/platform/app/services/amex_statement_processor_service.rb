@@ -1,11 +1,15 @@
 require "combine_pdf"
 
 class AmexStatementProcessorService
-  Result = Data.define(:success, :data, :error) do
+  NON_RETRYABLE_REASONS = %i[config_error].freeze
+
+  Result = Data.define(:success, :data, :error, :reason) do
     alias_method :success?, :success
+    def retryable? = !success && !NON_RETRYABLE_REASONS.include?(reason)
   end
 
-  MAX_PAGES_PER_BATCH = 5
+  INITIAL_BATCH_SIZE = 20
+  MIN_BATCH_SIZE = 5
 
   SYSTEM_PROMPT = <<~PROMPT
     あなたは日本の経理・簿記の専門家です。以下のルールに厳密に従い、Amex 利用明細 PDF から抽出した取引データを仕訳台帳データに変換してください。
@@ -161,38 +165,21 @@ class AmexStatementProcessorService
 
   def call
     unless ENV["ANTHROPIC_API_KEY"].present?
-      return Result.new(success: false, data: {}, error: "ANTHROPIC_API_KEY が設定されていません")
+      return Result.new(success: false, data: {}, error: "ANTHROPIC_API_KEY が設定されていません", reason: :config_error)
     end
 
     pdf_binary = read_pdf_binary
     account_master_context = build_account_master_context
     user_prompt = build_user_prompt(account_master_context)
-    page_count = count_pages(pdf_binary)
+    pages = parse_pdf_pages(pdf_binary)
 
-    if page_count <= MAX_PAGES_PER_BATCH
-      pdf_data = Base64.strict_encode64(pdf_binary)
-      process_single_pdf(pdf_data, user_prompt)
-    else
-      batches = split_pdf(pdf_binary)
-      batch_results = []
-
-      batches.each_with_index do |batch_pdf_binary, index|
-        batch_pdf_data = Base64.strict_encode64(batch_pdf_binary)
-        previous_transaction_count = batch_results.sum { |r| r[:transactions]&.size || 0 }
-        result = process_batch(batch_pdf_data, index, batches.size, page_count, user_prompt, previous_transaction_count)
-        return result unless result.success?
-        batch_results << result.data
-      end
-
-      merged_data = merge_batch_results(batch_results)
-      Result.new(success: true, data: merged_data, error: nil)
-    end
+    process_with_adaptive_batch_size(pages, user_prompt)
   rescue Anthropic::Errors::APIError => e
-    Result.new(success: false, data: {}, error: "Anthropic API エラー: #{e.message}")
+    Result.new(success: false, data: {}, error: "Anthropic API エラー: #{e.message}", reason: :api_error)
   rescue JSON::ParserError => e
-    Result.new(success: false, data: {}, error: "JSON パースエラー: #{e.message}")
+    Result.new(success: false, data: {}, error: "JSON パースエラー: #{e.message}", reason: :parse_error)
   rescue StandardError => e
-    Result.new(success: false, data: {}, error: "予期しないエラー: #{e.message}")
+    Result.new(success: false, data: {}, error: "予期しないエラー: #{e.message}", reason: :unexpected_error)
   end
 
   private
@@ -208,54 +195,76 @@ class AmexStatementProcessorService
     end
   end
 
-  def count_pages(pdf_binary)
-    pdf = CombinePDF.parse(pdf_binary)
-    pdf.pages.size
+  def parse_pdf_pages(pdf_binary)
+    CombinePDF.parse(pdf_binary).pages
   end
 
-  def split_pdf(pdf_binary)
-    pdf = CombinePDF.parse(pdf_binary)
-    pages = pdf.pages
-
-    pages.each_slice(MAX_PAGES_PER_BATCH).map do |page_group|
+  def build_batch_pdfs(pages, batch_size)
+    pages.each_slice(batch_size).map do |page_group|
       batch_pdf = CombinePDF.new
       page_group.each { |page| batch_pdf << page }
       batch_pdf.to_pdf
     end
   end
 
-  def process_single_pdf(pdf_data, user_prompt)
-    response = call_api(pdf_data, user_prompt)
+  def process_with_adaptive_batch_size(pages, user_prompt)
+    batch_size = [ INITIAL_BATCH_SIZE, pages.size ].min
 
-    if response.respond_to?(:stop_reason) && response.stop_reason == "max_tokens"
-      raise JSON::ParserError, "APIの応答がmax_tokensで切り詰められました。PDFのページ数が多すぎる可能性があります"
+    loop do
+      batch_pdfs = build_batch_pdfs(pages, batch_size)
+      batch_results = []
+      max_tokens_hit = false
+
+      batch_pdfs.each_with_index do |batch_pdf_binary, index|
+        batch_pdf_data = Base64.strict_encode64(batch_pdf_binary)
+        previous_transaction_count = batch_results.sum { |r| r[:transactions]&.size || 0 }
+
+        start_page = index * batch_size + 1
+        end_page = [ start_page + batch_size - 1, pages.size ].min
+
+        prompt = if batch_pdfs.size == 1
+          user_prompt
+        else
+          <<~CONTEXT
+            #{user_prompt}
+
+            【バッチ処理情報】
+            このPDFは全#{pages.size}ページ中のページ#{start_page}〜#{end_page}です（バッチ#{index + 1}/#{batch_pdfs.size}）。
+            前のバッチまでに#{previous_transaction_count}件の取引を処理済みです。transaction_noは#{previous_transaction_count + 1}から開始してください。
+            前のページからのカード会員情報がある場合は引き継いでください。
+          CONTEXT
+        end
+
+        response = call_api(batch_pdf_data, prompt)
+
+        if response.respond_to?(:stop_reason) && response.stop_reason == "max_tokens"
+          max_tokens_hit = true
+          break
+        end
+
+        data = parse_response(response)
+        batch_results << data
+      end
+
+      if max_tokens_hit
+        new_batch_size = batch_size / 2
+        if new_batch_size < MIN_BATCH_SIZE
+          return Result.new(
+            success: false, data: {}, reason: :api_error,
+            error: "バッチサイズ#{batch_size}でもmax_tokensに達しました。PDFのページあたりの情報量が多すぎます"
+          )
+        end
+        batch_size = new_batch_size
+        next
+      end
+
+      if batch_results.size == 1
+        return Result.new(success: true, data: batch_results.first, error: nil, reason: nil)
+      else
+        merged_data = merge_batch_results(batch_results)
+        return Result.new(success: true, data: merged_data, error: nil, reason: nil)
+      end
     end
-
-    data = parse_response(response)
-    Result.new(success: true, data: data, error: nil)
-  end
-
-  def process_batch(batch_pdf_data, batch_index, total_batches, total_pages, user_prompt, previous_transaction_count)
-    start_page = batch_index * MAX_PAGES_PER_BATCH + 1
-    end_page = [ start_page + MAX_PAGES_PER_BATCH - 1, total_pages ].min
-
-    batch_context = <<~CONTEXT
-      #{user_prompt}
-
-      【バッチ処理情報】
-      このPDFは全#{total_pages}ページ中のページ#{start_page}〜#{end_page}です（バッチ#{batch_index + 1}/#{total_batches}）。
-      前のバッチまでに#{previous_transaction_count}件の取引を処理済みです。transaction_noは#{previous_transaction_count + 1}から開始してください。
-      前のページからのカード会員情報がある場合は引き継いでください。
-    CONTEXT
-
-    response = call_api(batch_pdf_data, batch_context)
-
-    if response.respond_to?(:stop_reason) && response.stop_reason == "max_tokens"
-      raise JSON::ParserError, "バッチ#{batch_index + 1}/#{total_batches}でAPIの応答がmax_tokensで切り詰められました"
-    end
-
-    data = parse_response(response)
-    Result.new(success: true, data: data, error: nil)
   end
 
   def merge_batch_results(batch_results)

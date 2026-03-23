@@ -52,6 +52,7 @@ RSpec.describe AmexStatementProcessorService do
 
   let(:mock_response) do
     double("Response",
+      stop_reason: "end_turn",
       content: [
         double("Content", type: "text", text: valid_response_json)
       ]
@@ -113,6 +114,7 @@ RSpec.describe AmexStatementProcessorService do
     context "JSONがコードブロックで囲まれている場合" do
       let(:mock_response) do
         double("Response",
+          stop_reason: "end_turn",
           content: [
             double("Content", type: "text", text: "```json\n#{valid_response_json}\n```")
           ]
@@ -150,12 +152,15 @@ RSpec.describe AmexStatementProcessorService do
         result = service.call
         expect(result.success?).to be false
         expect(result.error).to include("Anthropic API エラー")
+        expect(result.reason).to eq(:api_error)
+        expect(result.retryable?).to be true
       end
     end
 
     context "不正なJSONが返された場合" do
       let(:mock_response) do
         double("Response",
+          stop_reason: "end_turn",
           content: [
             double("Content", type: "text", text: "invalid json {{{")
           ]
@@ -168,6 +173,8 @@ RSpec.describe AmexStatementProcessorService do
         result = service.call
         expect(result.success?).to be false
         expect(result.error).to include("JSON パースエラー")
+        expect(result.reason).to eq(:parse_error)
+        expect(result.retryable?).to be true
       end
     end
 
@@ -184,11 +191,17 @@ RSpec.describe AmexStatementProcessorService do
         result = service.call
         expect(result.success?).to be false
         expect(result.error).to include("ANTHROPIC_API_KEY")
+        expect(result.reason).to eq(:config_error)
+        expect(result.retryable?).to be false
       end
     end
 
-    context "5ページ以下の場合" do
+    context "INITIAL_BATCH_SIZE以下の場合" do
       let(:mock_pdf_pages) { Array.new(3) { |i| double("Page#{i + 1}") } }
+
+      before do
+        stub_const("AmexStatementProcessorService::INITIAL_BATCH_SIZE", 5)
+      end
 
       it "バッチ分割しないこと" do
         service = described_class.new(pdf: pdf_file, client_code: client.code)
@@ -201,7 +214,7 @@ RSpec.describe AmexStatementProcessorService do
       end
     end
 
-    context "6ページ以上の場合" do
+    context "INITIAL_BATCH_SIZEを超える場合" do
       let(:mock_pdf_pages) { Array.new(8) { |i| double("Page#{i + 1}") } }
 
       let(:batch1_response_json) do
@@ -284,6 +297,7 @@ RSpec.describe AmexStatementProcessorService do
 
       let(:batch1_mock_response) do
         double("Response",
+          stop_reason: "end_turn",
           content: [
             double("Content", type: "text", text: batch1_response_json)
           ]
@@ -292,6 +306,7 @@ RSpec.describe AmexStatementProcessorService do
 
       let(:batch2_mock_response) do
         double("Response",
+          stop_reason: "end_turn",
           content: [
             double("Content", type: "text", text: batch2_response_json)
           ]
@@ -299,6 +314,8 @@ RSpec.describe AmexStatementProcessorService do
       end
 
       before do
+        stub_const("AmexStatementProcessorService::INITIAL_BATCH_SIZE", 5)
+
         batch_pdf = CombinePDF.new
         allow(CombinePDF).to receive(:new).and_return(batch_pdf)
         allow(batch_pdf).to receive(:<<)
@@ -355,6 +372,8 @@ RSpec.describe AmexStatementProcessorService do
       let(:mock_pdf_pages) { Array.new(8) { |i| double("Page#{i + 1}") } }
 
       before do
+        stub_const("AmexStatementProcessorService::INITIAL_BATCH_SIZE", 5)
+
         batch_pdf = CombinePDF.new
         allow(CombinePDF).to receive(:new).and_return(batch_pdf)
         allow(batch_pdf).to receive(:<<)
@@ -379,11 +398,56 @@ RSpec.describe AmexStatementProcessorService do
         result = service.call
         expect(result.success?).to be false
         expect(result.error).to include("Anthropic API エラー")
+        expect(result.reason).to eq(:api_error)
       end
     end
 
-    context "バッチ処理中にmax_tokensで切り詰められた場合" do
-      let(:mock_pdf_pages) { Array.new(8) { |i| double("Page#{i + 1}") } }
+    context "max_tokensで動的にバッチサイズを縮小するケース" do
+      let(:mock_pdf_pages) { Array.new(12) { |i| double("Page#{i + 1}") } }
+
+      let(:max_tokens_response) do
+        double("Response",
+          stop_reason: "max_tokens",
+          content: [
+            double("Content", type: "text", text: '{"incomplete": true}')
+          ]
+        )
+      end
+
+      let(:success_response) do
+        double("Response",
+          stop_reason: "end_turn",
+          content: [
+            double("Content", type: "text", text: valid_response_json)
+          ]
+        )
+      end
+
+      before do
+        stub_const("AmexStatementProcessorService::INITIAL_BATCH_SIZE", 12)
+        stub_const("AmexStatementProcessorService::MIN_BATCH_SIZE", 5)
+
+        batch_pdf = CombinePDF.new
+        allow(CombinePDF).to receive(:new).and_return(batch_pdf)
+        allow(batch_pdf).to receive(:<<)
+        allow(batch_pdf).to receive(:to_pdf).and_return("fake_pdf_binary")
+      end
+
+      it "バッチサイズを半分にしてリトライし成功すること" do
+        messages = mock_client.messages
+        allow(messages).to receive(:create)
+          .and_return(max_tokens_response, success_response, success_response)
+
+        service = described_class.new(pdf: pdf_file, client_code: client.code)
+        result = service.call
+
+        expect(result.success?).to be true
+        expect(messages).to have_received(:create).exactly(3).times
+      end
+    end
+
+    context "最小バッチサイズでもmax_tokensに達する場合" do
+      let(:mock_pdf_pages) { Array.new(10) { |i| double("Page#{i + 1}") } }
 
       let(:max_tokens_response) do
         double("Response",
@@ -395,6 +459,9 @@ RSpec.describe AmexStatementProcessorService do
       end
 
       before do
+        stub_const("AmexStatementProcessorService::INITIAL_BATCH_SIZE", 10)
+        stub_const("AmexStatementProcessorService::MIN_BATCH_SIZE", 5)
+
         batch_pdf = CombinePDF.new
         allow(CombinePDF).to receive(:new).and_return(batch_pdf)
         allow(batch_pdf).to receive(:<<)
@@ -404,13 +471,26 @@ RSpec.describe AmexStatementProcessorService do
         allow(messages).to receive(:create).and_return(max_tokens_response)
       end
 
-      it "バッチ番号付きのエラーメッセージを返すこと" do
+      it "エラーを返すこと" do
         service = described_class.new(pdf: pdf_file, client_code: client.code)
 
         result = service.call
         expect(result.success?).to be false
-        expect(result.error).to include("バッチ1/2")
         expect(result.error).to include("max_tokens")
+        expect(result.reason).to eq(:api_error)
+        expect(result.retryable?).to be true
+      end
+    end
+
+    describe "Result#retryable?" do
+      it "api_errorはretryableであること" do
+        result = described_class::Result.new(success: false, data: {}, error: "error", reason: :api_error)
+        expect(result.retryable?).to be true
+      end
+
+      it "config_errorはretryableでないこと" do
+        result = described_class::Result.new(success: false, data: {}, error: "error", reason: :config_error)
+        expect(result.retryable?).to be false
       end
     end
   end

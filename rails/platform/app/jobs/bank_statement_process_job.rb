@@ -1,15 +1,14 @@
 class BankStatementProcessJob < ApplicationJob
+  class RetryableError < StandardError; end
+
   queue_as :default
 
-  retry_on StandardError, wait: 5.seconds, attempts: 2
+  retry_on RetryableError, wait: 5.seconds, attempts: 2 do |job, exception|
+    batch = StatementBatch.find_by(id: job.arguments.first)
+    batch&.update(status: "failed", error_message: "リトライ上限到達: #{exception.message}")
+  end
 
   discard_on ActiveRecord::RecordNotFound
-
-  after_discard do |job, exception|
-    batch_id = job.arguments.first
-    batch = StatementBatch.find_by(id: batch_id)
-    batch&.update(status: "failed", error_message: "ジョブ実行エラー: #{exception.message}")
-  end
 
   def perform(statement_batch_id)
     batch = StatementBatch.find(statement_batch_id)
@@ -22,14 +21,20 @@ class BankStatementProcessJob < ApplicationJob
     result = service.call
 
     if result.success?
-      ActiveRecord::Base.transaction do
-        create_journal_entries(batch, result.data)
-        batch.update!(
-          status: "completed",
-          summary: result.data[:summary] || {},
-          error_message: nil
-        )
+      begin
+        ActiveRecord::Base.transaction do
+          create_journal_entries(batch, result.data)
+          batch.update!(
+            status: "completed",
+            summary: result.data[:summary] || {},
+            error_message: nil
+          )
+        end
+      rescue ActiveRecord::RecordInvalid => e
+        batch.update(status: "failed", error_message: "仕訳データの保存に失敗: #{e.message}")
       end
+    elsif result.retryable?
+      raise RetryableError, result.error
     else
       batch.update!(status: "failed", error_message: result.error)
     end

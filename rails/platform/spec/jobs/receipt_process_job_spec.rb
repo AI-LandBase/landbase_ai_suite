@@ -191,6 +191,41 @@ RSpec.describe ReceiptProcessJob, type: :job do
     end
   end
 
+  context "仕訳データのバリデーションエラーの場合" do
+    let(:mock_result_data) do
+      {
+        is_receipt: true,
+        receipt_date: "2026-03-01",
+        transactions: [
+          {
+            transaction_no: 1,
+            date: nil,
+            debit_account: nil,
+            debit_amount: 100,
+            credit_account: nil,
+            credit_amount: 100,
+            description: "テスト"
+          }
+        ],
+        summary: {}
+      }
+    end
+
+    it "ステータスをfailedに更新すること" do
+      described_class.perform_now(batch.id)
+
+      batch.reload
+      expect(batch.status).to eq("failed")
+      expect(batch.error_message).to include("仕訳データの保存に失敗")
+    end
+
+    it "JournalEntryを作成しないこと" do
+      expect {
+        described_class.perform_now(batch.id)
+      }.not_to change(JournalEntry, :count)
+    end
+  end
+
   it "レコードが存在しない場合は静かに終了すること" do
     expect {
       described_class.perform_now(-1)

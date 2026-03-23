@@ -23,13 +23,17 @@ class ReceiptProcessJob < ApplicationJob
     result = service.call
 
     if result.success?
-      ActiveRecord::Base.transaction do
-        create_journal_entries(batch, result.data)
-        batch.update!(
-          status: "completed",
-          summary: result.data[:summary] || {},
-          error_message: nil
-        )
+      begin
+        ActiveRecord::Base.transaction do
+          create_journal_entries(batch, result.data)
+          batch.update!(
+            status: "completed",
+            summary: result.data[:summary] || {},
+            error_message: nil
+          )
+        end
+      rescue ActiveRecord::RecordInvalid => e
+        batch.update(status: "failed", error_message: "仕訳データの保存に失敗: #{e.message}")
       end
     elsif result.retryable?
       raise RetryableError, result.error
