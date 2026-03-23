@@ -33,7 +33,7 @@ class ReceiptProcessJob < ApplicationJob
           )
         end
       rescue ActiveRecord::RecordInvalid => e
-        batch.update!(status: "failed", error_message: "仕訳データの保存に失敗: #{e.message}")
+        batch.update(status: "failed", error_message: "仕訳データの保存に失敗: #{e.message}")
       end
     elsif result.retryable?
       raise RetryableError, result.error

@@ -1,5 +1,5 @@
 class ReceiptProcessorService
-  NON_RETRYABLE_REASONS = %i[non_receipt unsupported_format].freeze
+  NON_RETRYABLE_REASONS = %i[config_error non_receipt unsupported_format].freeze
 
   Result = Data.define(:success, :data, :error, :reason) do
     alias_method :success?, :success
