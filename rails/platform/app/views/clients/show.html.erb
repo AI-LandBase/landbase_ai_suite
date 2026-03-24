@@ -4,12 +4,12 @@
   <%= render "shared/card", class: "mb-8" do %>
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900"><%= @client.name %></h1>
-        <p class="text-sm font-mono text-gray-500 mt-1"><%= @client.code %></p>
+        <h1 class="text-2xl font-bold text-gray-100"><%= @client.name %></h1>
+        <p class="text-sm font-mono text-gray-400 mt-1"><%= @client.code %></p>
       </div>
       <div class="flex items-center gap-3">
         <% if @client.industry.present? %>
-          <span class="text-sm text-gray-600"><%= @client.industry %></span>
+          <span class="text-sm text-gray-400"><%= @client.industry %></span>
         <% end %>
         <% if @client.status == "active" %>
           <%= render "shared/badge", label: @client.status_label, variant: :success, size: :md %>
@@ -28,29 +28,29 @@
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <%= render "shared/card", href: journal_entries_path(client_code: @client.code), hover: true do %>
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">仕訳台帳</h2>
-      <p class="text-sm text-gray-500">仕訳データの一覧表示・編集・CSVエクスポート</p>
+      <h2 class="text-lg font-semibold text-gray-100 mb-2">仕訳台帳</h2>
+      <p class="text-sm text-gray-400">仕訳データの一覧表示・編集・CSVエクスポート</p>
     <% end %>
 
     <%= render "shared/card", href: new_amex_statement_path(client_code: @client.code), hover: true do %>
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">Amex明細処理</h2>
-      <p class="text-sm text-gray-500">Amex利用明細PDFをAIで仕訳データに変換</p>
+      <h2 class="text-lg font-semibold text-gray-100 mb-2">Amex明細処理</h2>
+      <p class="text-sm text-gray-400">Amex利用明細PDFをAIで仕訳データに変換</p>
     <% end %>
 
     <%= render "shared/card", href: new_bank_statement_path(client_code: @client.code), hover: true do %>
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">銀行明細処理</h2>
-      <p class="text-sm text-gray-500">銀行入出金明細PDFをAIで仕訳データに変換</p>
+      <h2 class="text-lg font-semibold text-gray-100 mb-2">銀行明細処理</h2>
+      <p class="text-sm text-gray-400">銀行入出金明細PDFをAIで仕訳データに変換</p>
     <% end %>
 
     <%= render "shared/card", href: new_invoice_path(client_code: @client.code), hover: true do %>
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">請求書処理</h2>
-      <p class="text-sm text-gray-500">請求書PDFをAIで仕訳データに変換</p>
+      <h2 class="text-lg font-semibold text-gray-100 mb-2">請求書処理</h2>
+      <p class="text-sm text-gray-400">請求書PDFをAIで仕訳データに変換</p>
     <% end %>
 
     <% if @client.feature_available?(:cleaning_manuals) %>
     <%= render "shared/card", href: cleaning_manuals_path(client_code: @client.code), hover: true do %>
-      <h2 class="text-lg font-semibold text-gray-900 mb-2">清掃マニュアル</h2>
-      <p class="text-sm text-gray-500">AI生成の清掃基準マニュアル管理</p>
+      <h2 class="text-lg font-semibold text-gray-100 mb-2">清掃マニュアル</h2>
+      <p class="text-sm text-gray-400">AI生成の清掃基準マニュアル管理</p>
     <% end %>
     <% end %>
   </div>

@@ -25,28 +25,28 @@
   <body>
     <% if user_signed_in? %>
       <div <%= 'data-controller="sidebar"'.html_safe if @sidebar_client %>>
-      <nav class="bg-white border-b border-gray-200 fixed w-full z-10 top-0">
+      <nav class="bg-gray-900 border-b border-gray-700 fixed w-full z-10 top-0">
         <div class="container mx-auto px-5 py-3 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <% if @sidebar_client %>
-              <button type="button" class="lg:hidden p-1 text-gray-600 hover:text-gray-900" data-action="click->sidebar#toggle">
+              <button type="button" class="lg:hidden p-1 text-gray-400 hover:text-gray-100" data-action="click->sidebar#toggle">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
               </button>
             <% end %>
-            <%= link_to "AI Suite", root_path, class: "font-semibold text-gray-800 hover:text-gray-600 transition-colors" %>
+            <%= link_to "AI Suite", root_path, class: "font-semibold text-gray-100 hover:text-gray-300 transition-colors" %>
             <% if @sidebar_client %>
               <span class="text-gray-400">/</span>
-              <%= link_to @sidebar_client.name, client_path(@sidebar_client), class: "text-sm text-gray-600 hover:text-gray-800 transition-colors" %>
+              <%= link_to @sidebar_client.name, client_path(@sidebar_client), class: "text-sm text-gray-400 hover:text-gray-100 transition-colors" %>
             <% else %>
               <% clients_active = current_page?(root_path) || current_page?(clients_path) || request.path.start_with?('/clients/') %>
               <%= link_to "クライアント一覧", clients_path,
-                    class: "text-sm #{clients_active ? 'text-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'} transition-colors" %>
+                    class: "text-sm #{clients_active ? 'text-teal-400 font-medium' : 'text-gray-400 hover:text-gray-300'} transition-colors" %>
             <% end %>
           </div>
           <div class="flex items-center gap-4">
-            <span class="text-sm text-gray-600"><%= current_user.email %></span>
+            <span class="text-sm text-gray-400"><%= current_user.email %></span>
             <%= button_to "ログアウト", destroy_user_session_path, method: :delete,
-                class: "text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded transition" %>
+                class: "text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded transition" %>
           </div>
         </div>
       </nav>
@@ -55,14 +55,14 @@
     <% flash_top = user_signed_in? ? "top-14" : "top-0" %>
     <% if notice %>
       <div class="fixed <%= flash_top %> left-0 right-0 z-20 flex justify-center px-5 pt-2">
-        <div class="bg-green-50 border border-green-300 text-green-800 text-sm px-4 py-2 rounded shadow max-w-xl w-full">
+        <div class="bg-green-950 border border-green-700 text-green-300 text-sm px-4 py-2 rounded shadow max-w-xl w-full">
           <%= notice %>
         </div>
       </div>
     <% end %>
     <% if alert %>
       <div class="fixed <%= flash_top %> left-0 right-0 z-20 flex justify-center px-5 pt-2">
-        <div class="bg-red-50 border border-red-300 text-red-800 text-sm px-4 py-2 rounded shadow max-w-xl w-full">
+        <div class="bg-red-950 border border-red-700 text-red-300 text-sm px-4 py-2 rounded shadow max-w-xl w-full">
           <%= alert %>
         </div>
       </div>

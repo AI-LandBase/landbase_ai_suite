@@ -6,16 +6,16 @@
   Block:
     <tbody>の中身をyieldで受け取る
 %>
-<div class="bg-white shadow rounded-lg overflow-hidden <%= local_assigns[:class] %>">
-  <table class="min-w-full divide-y divide-gray-200">
-    <thead class="bg-gray-50">
+<div class="bg-gray-900 shadow rounded-lg overflow-hidden <%= local_assigns[:class] %>">
+  <table class="min-w-full divide-y divide-gray-700">
+    <thead class="bg-gray-800">
       <tr>
         <% headers.each do |header| %>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"><%= header %></th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase"><%= header %></th>
         <% end %>
       </tr>
     </thead>
-    <tbody class="divide-y divide-gray-200">
+    <tbody class="divide-y divide-gray-700">
       <%= yield %>
     </tbody>
   </table>

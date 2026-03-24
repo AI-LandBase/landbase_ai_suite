@@ -7,14 +7,14 @@
 
   <%# サイドバー本体 %>
   <aside data-sidebar-target="sidebar"
-         class="fixed top-14 left-0 bottom-0 w-56 bg-white border-r border-gray-200 z-30
+         class="fixed top-14 left-0 bottom-0 w-56 bg-gray-900 border-r border-gray-700 z-30
                 overflow-y-auto
                 -translate-x-full lg:translate-x-0 transition-transform duration-200">
     <nav class="py-4">
       <% sidebar_items(@sidebar_client).each do |item| %>
         <% active = current_sidebar_item?(item) %>
         <%= link_to item[:path],
-              class: "flex items-center gap-3 px-4 py-2.5 text-sm #{active ? 'bg-blue-50 text-blue-700 font-medium border-r-2 border-blue-700' : 'text-gray-700 hover:bg-gray-50'}" do %>
+              class: "flex items-center gap-3 px-4 py-2.5 text-sm #{active ? 'bg-teal-950 text-teal-400 font-medium border-r-2 border-teal-400' : 'text-gray-300 hover:bg-gray-800'}" do %>
           <%= render "shared/sidebar_icon", icon: item[:icon] %>
           <span><%= item[:label] %></span>
         <% end %>

@@ -8,26 +8,26 @@
 
   <form method="get" class="mb-6 flex flex-wrap gap-4 items-end">
     <div>
-      <label for="query" class="block text-sm font-medium text-gray-700 mb-1">名前 / コードで検索</label>
+      <label for="query" class="block text-sm font-medium text-gray-300 mb-1">名前 / コードで検索</label>
       <input type="text" name="query" id="query" value="<%= params[:query] %>"
              placeholder="クライアント名またはコード"
-             class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border w-72">
+             class="rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border w-72">
     </div>
     <%= render "shared/button", label: "検索", variant: :neutral, type: "submit" %>
     <% if params[:query].present? %>
-      <%= link_to "クリア", clients_path, class: "text-sm text-gray-500 hover:text-gray-700 px-2 py-2" %>
+      <%= link_to "クリア", clients_path, class: "text-sm text-gray-400 hover:text-gray-300 px-2 py-2" %>
     <% end %>
   </form>
 
   <% if @clients.empty? %>
-    <p class="text-gray-500">クライアントが見つかりません。</p>
+    <p class="text-gray-400">クライアントが見つかりません。</p>
   <% else %>
     <%= render "shared/table", headers: ["コード", "名前", "業種", "ステータス"] do %>
       <% @clients.each do |client| %>
-        <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='<%= client_path(client) %>'">
-          <td class="px-6 py-4 text-sm font-mono text-gray-900"><%= client.code %></td>
-          <td class="px-6 py-4 text-sm font-medium text-gray-900"><%= client.name %></td>
-          <td class="px-6 py-4 text-sm text-gray-500"><%= client.industry.presence || "—" %></td>
+        <tr class="hover:bg-gray-800 cursor-pointer" onclick="window.location='<%= client_path(client) %>'">
+          <td class="px-6 py-4 text-sm font-mono text-gray-100"><%= client.code %></td>
+          <td class="px-6 py-4 text-sm font-medium text-gray-100"><%= client.name %></td>
+          <td class="px-6 py-4 text-sm text-gray-400"><%= client.industry.presence || "—" %></td>
           <td class="px-6 py-4">
             <% if client.status == "active" %>
               <%= render "shared/badge", label: client.status_label, variant: :success %>
