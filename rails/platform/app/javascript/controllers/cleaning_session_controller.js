@@ -28,6 +28,22 @@ export default class extends Controller {
 
   async loadCurrentStep() {
     try {
+      // 中断中セッションの場合は自動再開
+      const sessionRes = await this.apiFetch(`/api/v1/cleaning_sessions/${this.sessionIdValue}`)
+      const session = await sessionRes.json()
+
+      if (session.status === "suspended") {
+        const resumeRes = await this.apiFetch(
+          `/api/v1/cleaning_sessions/${this.sessionIdValue}/resume`,
+          { method: "PATCH" }
+        )
+        if (!resumeRes.ok) {
+          const err = await resumeRes.json()
+          this.showError(err.error || "再開に失敗しました。")
+          return
+        }
+      }
+
       const response = await this.apiFetch(`/api/v1/cleaning_sessions/${this.sessionIdValue}/current_step`)
       const data = await response.json()
 
