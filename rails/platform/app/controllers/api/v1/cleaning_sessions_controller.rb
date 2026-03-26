@@ -91,15 +91,22 @@ module Api
         step = CleaningSessionService.skip_step(@session)
         return render_error("スキップするステップがありません") unless step
 
+        @session.reload
         auto_complete_if_done
 
-        render json: {
+        response = {
           skipped_step: { task: step.task, area_name: step.area_name },
-          next_step: CleaningSessionService.current_step_data(@session.reload),
+          next_step: CleaningSessionService.current_step_data(@session),
           session_status: @session.status,
           completed_steps: @session.completed_steps_count,
           total_steps: @session.total_steps_count
         }
+
+        if @session.suspended?
+          response[:error] = "すべてのステップがスキップされました。清掃を最初からやり直してください。"
+        end
+
+        render json: response
       end
 
       # PATCH /api/v1/cleaning_sessions/:id/suspend
@@ -151,8 +158,12 @@ module Api
 
       def auto_complete_if_done
         return unless @session.in_progress?
+        return if @session.current_step
 
-        if @session.current_step.nil?
+        @session.reload
+        if @session.step_counts.fetch("passed", 0).zero?
+          CleaningSessionService.suspend(@session)
+        else
           CleaningSessionService.complete(@session)
         end
       end

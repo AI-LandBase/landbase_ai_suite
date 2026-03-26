@@ -124,7 +124,11 @@ class CleaningPhotoJudgeService
                       .call
     { data: File.binread(result.path), media_type: "image/jpeg" }
   ensure
-    result.close! if result.respond_to?(:close!)
+    if result
+      result_path = result.path if result.respond_to?(:path)
+      result.close! if result.respond_to?(:close!)
+      File.delete(result_path) if result_path && File.exist?(result_path)
+    end
     photo.rewind if photo.respond_to?(:rewind)
   end
 

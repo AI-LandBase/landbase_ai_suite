@@ -226,7 +226,9 @@ export default class extends Controller {
 
       this.updateProgress(data.completed_steps, data.total_steps)
 
-      if (data.session_status === "completed") {
+      if (data.error) {
+        this.showError(data.error)
+      } else if (data.session_status === "completed") {
         this.showCompleted()
       } else if (data.next_step) {
         this.updateStepDisplay(data.next_step)

@@ -73,9 +73,14 @@ class CleaningSessionService
         return { success: false, error: judge_result.error }
       end
 
-      # 3. DB更新（短いトランザクション — attempts_count + attempt + status を一括）
+      # 3. DB更新（短いトランザクション — ロック再取得 + 状態再検証 + 一括更新）
       attempt = nil
       ActiveRecord::Base.transaction do
+        locked_step = session.cleaning_session_steps.lock.find(locked_step.id)
+        unless locked_step.status.in?(%w[pending failed])
+          return { success: false, error: "このステップは既に処理済みです" }
+        end
+
         CleaningSessionStep.where(id: locked_step.id).update_all("attempts_count = attempts_count + 1")
         locked_step.reload
 
@@ -104,10 +109,16 @@ class CleaningSessionService
     end
 
     def skip_step(session)
-      step = session.current_step
-      return nil unless step
+      step = ActiveRecord::Base.transaction do
+        s = session.current_step
+        return nil unless s
 
-      step.update!(status: "skipped")
+        locked = session.cleaning_session_steps.lock.find(s.id)
+        return nil unless locked.status.in?(%w[pending failed])
+
+        locked.update!(status: "skipped")
+        locked
+      end
       step
     end
 
