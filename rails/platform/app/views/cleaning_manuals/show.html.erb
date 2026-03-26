@@ -16,10 +16,9 @@
     <div class="flex items-center gap-3">
       <% if @manual.status == "published" %>
         <%= render "shared/badge", label: "公開", variant: :success, size: :md %>
-        <% suspended_session = @manual.cleaning_sessions.where(status: "suspended").order(updated_at: :desc).first %>
-        <% if suspended_session %>
+        <% if @suspended_session %>
           <%= link_to "清掃を再開する",
-              cleaning_session_path(suspended_session, client_code: @client_code || @manual.client.code),
+              cleaning_session_path(@suspended_session, client_code: @client_code || @manual.client.code),
               class: "bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition" %>
         <% end %>
         <%= link_to "清掃を開始する",

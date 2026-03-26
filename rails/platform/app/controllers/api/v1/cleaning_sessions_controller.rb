@@ -160,7 +160,6 @@ module Api
         return unless @session.in_progress?
         return if @session.current_step
 
-        @session.reload
         if @session.step_counts.fetch("passed", 0).zero?
           CleaningSessionService.suspend(@session)
         else

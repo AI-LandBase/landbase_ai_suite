@@ -14,6 +14,7 @@ class CleaningManualsController < ApplicationController
 
   def show
     @manual = CleaningManual.for_client(@client_code).find(params[:id])
+    @suspended_session = @manual.cleaning_sessions.where(status: "suspended").order(updated_at: :desc).first
   end
 
   def new
