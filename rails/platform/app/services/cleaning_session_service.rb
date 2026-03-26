@@ -1,0 +1,170 @@
+class CleaningSessionService
+  class << self
+    def start(cleaning_manual:, staff_name:, client:)
+      manual_data = cleaning_manual.manual_data
+      areas = manual_data["areas"] || manual_data[:areas] || []
+
+      session = CleaningSession.new(
+        cleaning_manual: cleaning_manual,
+        client: client,
+        staff_name: staff_name,
+        status: "in_progress",
+        started_at: Time.current
+      )
+
+      areas.each_with_index do |area, area_idx|
+        area_name = area["area_name"] || area[:area_name]
+        steps = area["cleaning_steps"] || area[:cleaning_steps] || []
+
+        steps.each_with_index do |step, step_idx|
+          session.cleaning_session_steps.build(
+            area_name: area_name,
+            area_index: area_idx,
+            step_index: step_idx,
+            task: step["task"] || step[:task],
+            status: "pending"
+          )
+        end
+      end
+
+      session.save!
+      session
+    end
+
+    def current_step_data(session)
+      step = session.current_step
+      return nil unless step
+
+      manual_data = session.cleaning_manual.manual_data
+      areas = manual_data["areas"] || manual_data[:areas] || []
+      area = areas[step.area_index]
+      manual_step = (area["cleaning_steps"] || area[:cleaning_steps] || [])[step.step_index] if area
+
+      {
+        step_id: step.id,
+        area_name: step.area_name,
+        area_index: step.area_index,
+        step_index: step.step_index,
+        task: step.task,
+        description: manual_step && (manual_step["description"] || manual_step[:description]),
+        checkpoint: manual_step && (manual_step["checkpoint"] || manual_step[:checkpoint]),
+        estimated_minutes: manual_step && (manual_step["estimated_minutes"] || manual_step[:estimated_minutes]),
+        status: step.status,
+        attempts_count: step.attempts_count,
+        total_steps: session.total_steps_count,
+        completed_steps: session.completed_steps_count
+      }
+    end
+
+    def judge(session:, step:, photos:)
+      manual_data = session.cleaning_manual.manual_data
+      areas = manual_data["areas"] || manual_data[:areas] || []
+      area = areas[step.area_index]
+      manual_step = (area["cleaning_steps"] || area[:cleaning_steps] || [])[step.step_index] if area
+
+      description = manual_step && (manual_step["description"] || manual_step[:description]) || ""
+      checkpoint = manual_step && (manual_step["checkpoint"] || manual_step[:checkpoint]) || ""
+
+      judge_result = CleaningPhotoJudgeService.new(
+        photos: photos,
+        task: step.task,
+        description: description,
+        checkpoint: checkpoint
+      ).call
+
+      unless judge_result.success?
+        return { success: false, error: judge_result.error }
+      end
+
+      attempt = step.cleaning_session_attempts.create!(
+        attempt_number: step.attempts_count + 1,
+        result: judge_result.result,
+        ai_feedback: judge_result.feedback,
+        judged_at: Time.current
+      )
+
+      photos.each { |photo| attempt.photos.attach(photo) }
+
+      step.update!(attempts_count: step.attempts_count + 1)
+
+      if judge_result.result == "ok"
+        step.update!(status: "passed", passed_at: Time.current)
+      else
+        step.update!(status: "failed")
+      end
+
+      {
+        success: true,
+        result: judge_result.result,
+        feedback: judge_result.feedback,
+        attempt_number: attempt.attempt_number
+      }
+    end
+
+    def skip_step(session)
+      step = session.current_step
+      return nil unless step
+
+      step.update!(status: "skipped")
+      step
+    end
+
+    def suspend(session)
+      session.update!(status: "suspended")
+    end
+
+    def resume(session)
+      session.update!(status: "in_progress")
+    end
+
+    def complete(session)
+      session.update!(status: "completed", completed_at: Time.current)
+    end
+
+    def build_report(session)
+      steps = session.cleaning_session_steps.includes(
+        cleaning_session_attempts: { photos_attachments: :blob }
+      ).ordered
+
+      area_results = steps.group_by(&:area_name).map do |area_name, area_steps|
+        {
+          area_name: area_name,
+          steps: area_steps.map do |step|
+            {
+              task: step.task,
+              status: step.status,
+              attempts_count: step.attempts_count,
+              attempts: step.cleaning_session_attempts.map do |attempt|
+                {
+                  attempt_number: attempt.attempt_number,
+                  result: attempt.result,
+                  feedback: attempt.ai_feedback,
+                  judged_at: attempt.judged_at
+                }
+              end
+            }
+          end
+        }
+      end
+
+      duration_minutes = if session.started_at && session.completed_at
+                           ((session.completed_at - session.started_at) / 60.0).round(1)
+                         end
+
+      {
+        session_id: session.id,
+        staff_name: session.staff_name,
+        status: session.status,
+        started_at: session.started_at,
+        completed_at: session.completed_at,
+        duration_minutes: duration_minutes,
+        total_steps: session.total_steps_count,
+        passed_steps: steps.count { |s| s.status == "passed" },
+        skipped_steps: steps.count { |s| s.status == "skipped" },
+        failed_steps: steps.count { |s| s.status == "failed" },
+        total_attempts: steps.sum(&:attempts_count),
+        area_results: area_results
+      }
+    end
+  end
+end

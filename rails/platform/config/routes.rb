@@ -23,6 +23,18 @@ Rails.application.routes.draw do
         member do
           get :status
         end
+        resources :cleaning_sessions, only: [ :create ]
+      end
+
+      resources :cleaning_sessions, only: [ :show ] do
+        member do
+          get :current_step
+          post :judge
+          patch :skip
+          patch :suspend
+          patch :resume
+          get :report
+        end
       end
 
       resources :amex_statements, only: [] do
@@ -63,6 +75,11 @@ Rails.application.routes.draw do
   # Web UI
   resources :clients
   resources :cleaning_manuals, only: [ :index, :show, :new ]
+  resources :cleaning_sessions, only: [ :new, :show ] do
+    member do
+      get :report
+    end
+  end
   resources :amex_statements, only: [ :new ]
   resources :bank_statements, only: [ :new ]
   resources :invoices, only: [ :new ]

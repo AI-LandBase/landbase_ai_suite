@@ -2,6 +2,7 @@ class CleaningManual < ApplicationRecord
   STATUSES = %w[processing draft published failed].freeze
 
   belongs_to :client
+  has_many :cleaning_sessions, dependent: :restrict_with_error
   has_many_attached :images
 
   validates :property_name, presence: true
