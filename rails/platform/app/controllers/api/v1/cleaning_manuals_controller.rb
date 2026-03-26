@@ -1,7 +1,7 @@
 module Api
   module V1
     class CleaningManualsController < BaseController
-      ALLOWED_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
+      ALLOWED_CONTENT_TYPES = %w[image/jpeg image/png image/webp image/avif].freeze
       MAX_IMAGE_SIZE = 10.megabytes
       MAX_IMAGE_COUNT = 50
 
@@ -26,7 +26,7 @@ module Api
 
         invalid = images.reject { |img| Marcel::MimeType.for(img.tempfile, name: img.original_filename).in?(ALLOWED_CONTENT_TYPES) }
         if invalid.any?
-          return render_error("対応していない画像形式が含まれています。JPEG, PNG, WebP のみ対応しています。")
+          return render_error("対応していない画像形式が含まれています。JPEG, PNG, WebP, AVIF のみ対応しています。")
         end
 
         oversized = images.select { |img| img.size > MAX_IMAGE_SIZE }

@@ -107,6 +107,28 @@ RSpec.describe CleaningManualGeneratorService do
       end
     end
 
+    context "JSONがコードブロックなしでテキストに埋まっている場合" do
+      let(:mock_response) do
+        double("Response",
+          content: [
+            double("Content", type: "text", text: "以下がマニュアルです。\n#{valid_response_json}\n何かご質問があれば。")
+          ]
+        )
+      end
+
+      it "JSON部分を抽出してパースできること" do
+        service = described_class.new(
+          images: [image_file],
+          property_name: "テスト施設",
+          room_type: "スタンダード"
+        )
+
+        result = service.call
+        expect(result.success?).to be true
+        expect(result.data[:areas]).to be_present
+      end
+    end
+
     context "APIエラーが発生した場合" do
       before do
         messages = double("Messages")
