@@ -189,7 +189,7 @@ class CleaningManualGeneratorService
     result = processor.resize_to_limit(MAX_IMAGE_LONG_EDGE, MAX_IMAGE_LONG_EDGE).convert("jpeg").saver(quality: 80).call
     { data: File.binread(result.path), media_type: "image/jpeg" }
   ensure
-    result&.close! if result.respond_to?(:close!)
+    result.close! if result.respond_to?(:close!)
     image.rewind
   end
 
