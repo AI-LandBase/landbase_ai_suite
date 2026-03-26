@@ -41,7 +41,7 @@ class CleaningPhotoJudgeService
       model: ENV.fetch("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: content }]
+      messages: [ { role: "user", content: content } ]
     )
 
     text_block = response.content.find { |c| c.respond_to?(:type) && c.type.to_s == "text" }
@@ -111,11 +111,11 @@ class CleaningPhotoJudgeService
   def resize_image(photo)
     source = if photo.respond_to?(:tempfile)
                photo.tempfile.path
-             elsif photo.respond_to?(:path)
+    elsif photo.respond_to?(:path)
                photo.path
-             else
+    else
                photo.to_s
-             end
+    end
 
     processor = ImageProcessing::Vips.source(source)
     result = processor.resize_to_limit(MAX_IMAGE_LONG_EDGE, MAX_IMAGE_LONG_EDGE)

@@ -6,7 +6,7 @@ module Api
       MAX_IMAGE_COUNT = 5
 
       before_action :require_feature!
-      before_action :set_session, except: [:create]
+      before_action :set_session, except: [ :create ]
 
       # POST /api/v1/cleaning_manuals/:cleaning_manual_id/cleaning_sessions
       def create

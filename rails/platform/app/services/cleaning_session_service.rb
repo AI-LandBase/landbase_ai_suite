@@ -162,7 +162,7 @@ class CleaningSessionService
 
       duration_minutes = if session.started_at && session.completed_at
                            ((session.completed_at - session.started_at) / 60.0).round(1)
-                         end
+      end
 
       {
         session_id: session.id,

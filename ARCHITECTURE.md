@@ -113,8 +113,11 @@ PostgreSQL 16
     ├── journal_entry_lines  # 仕訳行（借方/貸方の明細行）
     ├── account_masters      # 勘定科目マッピングルール
     ├── statement_batches    # PDF 処理バッチ管理
-    ├── cleaning_manuals     # 清掃マニュアル（OperationAI）
-    └── active_storage_*     # ファイルストレージ（画像・PDF）
+    ├── cleaning_manuals           # 清掃マニュアル（OperationAI）
+    ├── cleaning_sessions          # 清掃セッション（OperationAI）
+    ├── cleaning_session_steps     # セッション内ステップ
+    ├── cleaning_session_attempts  # ステップ判定試行（AI判定結果）
+    └── active_storage_*           # ファイルストレージ（画像・PDF）
 ```
 
 ---
@@ -139,6 +142,16 @@ POST   /api/v1/cleaning_manuals/generate             # 画像から AI 生成
 GET    /api/v1/cleaning_manuals                      # マニュアル一覧
 GET    /api/v1/cleaning_manuals/:id                  # マニュアル詳細
 GET    /api/v1/cleaning_manuals/:id/status           # 生成状況確認
+
+# OperationAI — 清掃セッション（インタラクティブ実行）
+POST   /api/v1/cleaning_manuals/:id/cleaning_sessions  # セッション作成
+GET    /api/v1/cleaning_sessions/:id                    # セッション詳細
+GET    /api/v1/cleaning_sessions/:id/current_step       # 現在ステップ取得
+POST   /api/v1/cleaning_sessions/:id/judge              # AI 写真判定
+PATCH  /api/v1/cleaning_sessions/:id/skip               # ステップスキップ
+PATCH  /api/v1/cleaning_sessions/:id/suspend            # セッション中断
+PATCH  /api/v1/cleaning_sessions/:id/resume             # セッション再開
+GET    /api/v1/cleaning_sessions/:id/report             # 完了レポート
 ```
 
 ### リクエスト例
@@ -201,6 +214,8 @@ GET /api/v1/journal_entries?client_code=ikigai_stay&source_type=amex&status=revi
 | サービス | 責務 |
 |---|---|
 | `CleaningManualGeneratorService` | Claude Vision API で客室写真から清掃マニュアル生成 |
+| `CleaningSessionService` | 清掃セッションの状態管理（開始・判定・スキップ・中断/再開・完了・レポート） |
+| `CleaningPhotoJudgeService` | Claude Vision API で清掃写真の OK/NG 同期判定 |
 | `AmexStatementProcessorService` | Claude API で Amex PDF を仕訳データに変換 |
 | `BankStatementProcessorService` | Claude API で銀行明細 PDF を仕訳データに変換 |
 | `InvoiceProcessorService` | Claude API で請求書 PDF を仕訳データに変換 |
