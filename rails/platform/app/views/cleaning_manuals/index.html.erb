@@ -3,7 +3,7 @@
 <div class="w-full max-w-4xl mx-auto">
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-bold">清掃マニュアル一覧</h1>
-    <%= render "shared/button", label: "新規作成", href: new_cleaning_manual_path %>
+    <%= render "shared/button", label: "新規作成", href: new_cleaning_manual_path(client_code: @client_code) %>
   </div>
 
   <form method="get" class="mb-6 flex gap-4 items-end">
