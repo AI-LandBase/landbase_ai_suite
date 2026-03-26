@@ -65,16 +65,19 @@ class CleaningSessionService
         return { success: false, error: judge_result.error }
       end
 
-      # DB レベルでインクリメントして race condition を防止
-      CleaningSessionStep.where(id: step.id).update_all("attempts_count = attempts_count + 1")
-      step.reload
+      # update_all + create! を一括実行して attempts_count と attempts レコードの不整合を防止
+      attempt = nil
+      ActiveRecord::Base.transaction do
+        CleaningSessionStep.where(id: step.id).update_all("attempts_count = attempts_count + 1")
+        step.reload
 
-      attempt = step.cleaning_session_attempts.create!(
-        attempt_number: step.attempts_count,
-        result: judge_result.result,
-        ai_feedback: judge_result.feedback,
-        judged_at: Time.current
-      )
+        attempt = step.cleaning_session_attempts.create!(
+          attempt_number: step.attempts_count,
+          result: judge_result.result,
+          ai_feedback: judge_result.feedback,
+          judged_at: Time.current
+        )
+      end
 
       photos.each { |photo| attempt.photos.attach(photo) }
 
