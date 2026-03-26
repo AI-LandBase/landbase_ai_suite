@@ -9,7 +9,7 @@
       </div>
       <div class="flex items-center gap-3">
         <% if @client.industry.present? %>
-          <span class="text-sm text-gray-400"><%= @client.industry %></span>
+          <span class="text-sm text-gray-400"><%= @client.industry_label %></span>
         <% end %>
         <% if @client.status == "active" %>
           <%= render "shared/badge", label: @client.status_label, variant: :success, size: :md %>

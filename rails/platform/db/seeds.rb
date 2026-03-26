@@ -23,9 +23,9 @@ if Rails.env.development?
   # デモクライアント
   client = Client.find_or_create_by!(code: "demo") do |c|
     c.name = "デモ会社"
-    c.industry = "hotel"
+    c.industry = "accommodation"
   end
-  client.update!(industry: "hotel") if client.industry.blank?
+  client.update!(industry: "accommodation") if client.industry.blank?
   puts "デモクライアントを作成しました: #{client.name} (#{client.code}) [#{client.industry}]"
 
   # サンプル仕訳（単一仕訳）

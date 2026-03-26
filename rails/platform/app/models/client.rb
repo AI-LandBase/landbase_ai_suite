@@ -6,10 +6,18 @@ class Client < ApplicationRecord
     "inactive" => "無効"
   }.freeze
 
+  INDUSTRIES = {
+    "accommodation" => "宿泊業",
+    "restaurant" => "飲食業",
+    "activity" => "アクティビティ",
+    "retail" => "小売業",
+    "rental_car" => "レンタカー",
+    "beauty" => "美容・リラクゼーション",
+    "other" => "その他"
+  }.freeze
+
   INDUSTRY_FEATURES = {
-    "hotel"      => %w[cleaning_manuals],
-    "restaurant" => %w[],
-    "tour"       => %w[],
+    "accommodation" => %w[cleaning_manuals],
   }.freeze
 
   # === 関連 ===
@@ -22,7 +30,7 @@ class Client < ApplicationRecord
   validates :code, presence: true, uniqueness: true
   validates :name, presence: true
   validates :status, inclusion: { in: STATUSES.keys }
-  validates :industry, inclusion: { in: %w[restaurant hotel tour] }, allow_nil: true
+  validates :industry, inclusion: { in: INDUSTRIES.keys }, allow_nil: true
   validates :line_user_id, uniqueness: true, allow_nil: true
 
   # === スコープ ===
@@ -43,6 +51,10 @@ class Client < ApplicationRecord
 
   def status_label
     STATUSES[status]
+  end
+
+  def industry_label
+    INDUSTRIES[industry]
   end
 
   def feature_available?(feature)
