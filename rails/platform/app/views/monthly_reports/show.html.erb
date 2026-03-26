@@ -1,0 +1,58 @@
+<% content_for(:title) { "#{@report.display_year_month} 月次レポート" } %>
+
+<% content_for(:breadcrumb) do %>
+  <%= render "shared/breadcrumb", items: [
+    { label: "月次レポート一覧", path: monthly_reports_path(client_code: @client_code) },
+    { label: @report.display_year_month }
+  ] %>
+<% end %>
+
+<div class="w-full max-w-4xl mx-auto">
+  <!-- ヘッダー -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold"><%= @report.display_year_month %> 月次オペレーション分析レポート</h1>
+      <p class="text-gray-400 text-sm mt-1">
+        生成日時: <%= @report.generated_at&.strftime("%Y/%m/%d %H:%M") || "—" %>
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <% if @report.status == "published" %>
+        <%= render "shared/badge", label: "公開", variant: :success, size: :md %>
+      <% else %>
+        <%= render "shared/badge", label: "下書き", variant: :warning, size: :md %>
+      <% end %>
+      <button onclick="window.print()" class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+        <svg class="w-5 h-5 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+        </svg>
+        印刷
+      </button>
+    </div>
+  </div>
+
+  <!-- レポート本文 -->
+  <div class="bg-gray-900 shadow rounded-lg p-8 prose prose-invert prose-teal max-w-none
+              prose-headings:text-gray-100 prose-p:text-gray-300 prose-li:text-gray-300
+              prose-strong:text-gray-100 prose-table:text-gray-300
+              prose-th:text-gray-400 prose-th:bg-gray-800 prose-th:px-4 prose-th:py-2
+              prose-td:px-4 prose-td:py-2 prose-td:border-gray-700
+              prose-hr:border-gray-700 print:bg-white print:text-black print:shadow-none">
+    <%= @rendered_content %>
+  </div>
+
+  <!-- フッターアクション -->
+  <div class="mt-6 flex items-center justify-between">
+    <%= link_to "← 一覧に戻る", monthly_reports_path(client_code: @client_code), class: "text-teal-400 hover:text-teal-300 text-sm" %>
+    <div class="flex items-center gap-3">
+      <%= form_tag generate_monthly_reports_path, method: :post, class: "inline" do %>
+        <input type="hidden" name="client_code" value="<%= @client_code %>">
+        <input type="hidden" name="year_month" value="<%= @report.year_month %>">
+        <%= render "shared/button", label: "再生成", variant: :edit, type: "submit", size: :sm %>
+      <% end %>
+      <%= button_to "削除", monthly_report_path(@report, client_code: @client_code), method: :delete,
+            form: { data: { turbo_confirm: "このレポートを削除しますか？" } },
+            class: "rounded-md px-3 py-1.5 text-sm bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer" %>
+    </div>
+  </div>
+</div>

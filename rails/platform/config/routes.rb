@@ -66,6 +66,11 @@ Rails.application.routes.draw do
   resources :amex_statements, only: [ :new ]
   resources :bank_statements, only: [ :new ]
   resources :invoices, only: [ :new ]
+  resources :monthly_reports, only: [ :index, :show, :destroy ] do
+    collection do
+      post :generate
+    end
+  end
   resources :statement_batches, only: [ :show ]
   resources :journal_entries, only: [ :index, :show, :edit, :update ] do
     collection do

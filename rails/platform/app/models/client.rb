@@ -17,6 +17,7 @@ class Client < ApplicationRecord
   has_many :account_masters, dependent: :restrict_with_error
   has_many :cleaning_manuals, dependent: :restrict_with_error
   has_many :statement_batches, dependent: :restrict_with_error
+  has_many :monthly_reports, dependent: :restrict_with_error
 
   # === バリデーション ===
   validates :code, presence: true, uniqueness: true
