@@ -133,13 +133,13 @@ RSpec.describe "Web::Clients", type: :request do
 
       it "正常なパラメータで作成できること" do
         expect {
-          post clients_path, params: { client: { code: "new_client", name: "新規社", industry: "hotel", status: "active" } }
+          post clients_path, params: { client: { code: "new_client", name: "新規社", industry: "accommodation", status: "active" } }
         }.to change(Client, :count).by(1)
 
         client = Client.find_by(code: "new_client")
         expect(response).to redirect_to(client_path(client))
         expect(client.name).to eq("新規社")
-        expect(client.industry).to eq("hotel")
+        expect(client.industry).to eq("accommodation")
         expect(client.status).to eq("active")
       end
 
@@ -202,11 +202,11 @@ RSpec.describe "Web::Clients", type: :request do
       before { sign_in user }
 
       it "正常に更新できること" do
-        patch client_path(client), params: { client: { name: "更新後社", industry: "tour" } }
+        patch client_path(client), params: { client: { name: "更新後社", industry: "activity" } }
         expect(response).to redirect_to(client_path(client))
         client.reload
         expect(client.name).to eq("更新後社")
-        expect(client.industry).to eq("tour")
+        expect(client.industry).to eq("activity")
       end
 
       it "codeが変更されないこと" do

@@ -47,7 +47,7 @@ RSpec.describe Client, type: :model do
     end
 
     describe "industry" do
-      %w[restaurant hotel tour].each do |valid_industry|
+      Client::INDUSTRIES.each_key do |valid_industry|
         it "#{valid_industry}は有効" do
           subject.industry = valid_industry
           expect(subject).to be_valid
@@ -57,6 +57,16 @@ RSpec.describe Client, type: :model do
       it "nilは有効" do
         subject.industry = nil
         expect(subject).to be_valid
+      end
+
+      it "旧値hotelは無効" do
+        subject.industry = "hotel"
+        expect(subject).not_to be_valid
+      end
+
+      it "旧値tourは無効" do
+        subject.industry = "tour"
+        expect(subject).not_to be_valid
       end
 
       it "無効なindustryの場合エラー" do
@@ -91,6 +101,32 @@ RSpec.describe Client, type: :model do
   describe "STATUSES" do
     it "全ステータスが定義されている" do
       expect(Client::STATUSES.keys).to contain_exactly("active", "trial", "inactive")
+    end
+  end
+
+  describe "INDUSTRIES" do
+    it "全業種が定義されている" do
+      expect(Client::INDUSTRIES.keys).to contain_exactly(
+        "accommodation", "restaurant", "activity", "retail", "rental_car", "beauty", "other"
+      )
+    end
+  end
+
+  describe "#industry_label" do
+    it "accommodationは「宿泊業」を返す" do
+      expect(build(:client, industry: "accommodation").industry_label).to eq("宿泊業")
+    end
+
+    it "restaurantは「飲食業」を返す" do
+      expect(build(:client, industry: "restaurant").industry_label).to eq("飲食業")
+    end
+
+    it "activityは「アクティビティ」を返す" do
+      expect(build(:client, industry: "activity").industry_label).to eq("アクティビティ")
+    end
+
+    it "nilの場合はnilを返す" do
+      expect(build(:client, industry: nil).industry_label).to be_nil
     end
   end
 
@@ -172,8 +208,8 @@ RSpec.describe Client, type: :model do
         expect(client.feature_available?(:cleaning_manuals)).to be false
       end
 
-      it "tourクライアントはcleaning_manualsが利用不可" do
-        client = build(:client, industry: "tour", services: {})
+      it "activityクライアントはcleaning_manualsが利用不可" do
+        client = build(:client, industry: "activity", services: {})
         expect(client.feature_available?(:cleaning_manuals)).to be false
       end
 

@@ -7,7 +7,7 @@ FactoryBot.define do
     status { "active" }
 
     trait :hotel do
-      industry { "hotel" }
+      industry { "accommodation" }
     end
 
     trait :inactive do
