@@ -14,16 +14,25 @@ class CleaningSession < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
 
   def current_step
-    cleaning_session_steps.ordered.find_by(status: "pending") ||
-      cleaning_session_steps.ordered.find_by(status: "failed")
+    cleaning_session_steps.ordered.find_by(status: "failed") ||
+      cleaning_session_steps.ordered.find_by(status: "pending")
+  end
+
+  def step_counts
+    @step_counts ||= cleaning_session_steps.reorder(nil).group(:status).count
   end
 
   def total_steps_count
-    cleaning_session_steps.size
+    step_counts.values.sum
   end
 
   def completed_steps_count
-    cleaning_session_steps.where(status: %w[passed skipped]).count
+    step_counts.fetch("passed", 0) + step_counts.fetch("skipped", 0)
+  end
+
+  def reload(*)
+    @step_counts = nil
+    super
   end
 
   def in_progress?

@@ -109,6 +109,80 @@ RSpec.describe CleaningSessionService do
     end
   end
 
+  describe ".judge" do
+    let(:session) { described_class.start(cleaning_manual: manual, staff_name: "田中", client: client) }
+    let(:step) { session.current_step }
+    let(:photo) do
+      path = Rails.root.join("spec/fixtures/files/test_image.jpg")
+      { io: File.open(path), filename: "test_image.jpg", content_type: "image/jpeg" }
+    end
+
+    before do
+      mock_response = double("Response",
+        content: [double("Content", type: "text", text: judge_response_json)]
+      )
+      mock_messages = double("Messages", create: mock_response)
+      mock_client = double("Anthropic::Client", messages: mock_messages)
+      allow(Anthropic::Client).to receive(:new).and_return(mock_client)
+      allow_any_instance_of(CleaningPhotoJudgeService).to receive(:resize_image).and_return(
+        { data: "fake_image_data", media_type: "image/jpeg" }
+      )
+    end
+
+    context "OK 判定の場合" do
+      let(:judge_response_json) { '{"result":"ok","feedback":"清掃状態は良好です。"}' }
+
+      it "attempt を作成しステップを passed にすること" do
+        result = described_class.judge(session: session, step: step, photos: [photo])
+
+        expect(result[:success]).to be true
+        expect(result[:result]).to eq("ok")
+        expect(step.reload.status).to eq("passed")
+        expect(step.attempts_count).to eq(1)
+        expect(step.cleaning_session_attempts.count).to eq(1)
+      end
+    end
+
+    context "NG 判定の場合" do
+      let(:judge_response_json) { '{"result":"ng","feedback":"シーツにしわがあります。"}' }
+
+      it "attempt を作成しステップを failed にすること" do
+        result = described_class.judge(session: session, step: step, photos: [photo])
+
+        expect(result[:success]).to be true
+        expect(result[:result]).to eq("ng")
+        expect(step.reload.status).to eq("failed")
+        expect(step.attempts_count).to eq(1)
+      end
+
+      it "NG 後に再判定できること" do
+        described_class.judge(session: session, step: step, photos: [photo])
+        expect(step.reload.status).to eq("failed")
+
+        # current_step は failed を優先して返す
+        expect(session.reload.current_step).to eq(step)
+      end
+    end
+
+    context "AI判定サービスがエラーの場合" do
+      let(:judge_response_json) { "" }
+
+      before do
+        allow_any_instance_of(CleaningPhotoJudgeService).to receive(:call).and_return(
+          CleaningPhotoJudgeService::Result.new(success: false, result: nil, feedback: nil, error: "APIエラー")
+        )
+      end
+
+      it "エラーを返しステップを変更しないこと" do
+        result = described_class.judge(session: session, step: step, photos: [photo])
+
+        expect(result[:success]).to be false
+        expect(result[:error]).to eq("APIエラー")
+        expect(step.reload.status).to eq("pending")
+      end
+    end
+  end
+
   describe ".build_report" do
     it "レポートデータを返すこと" do
       session = create(:cleaning_session, cleaning_manual: manual, client: client, started_at: 1.hour.ago, completed_at: Time.current, status: "completed")

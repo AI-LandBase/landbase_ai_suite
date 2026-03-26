@@ -115,6 +115,56 @@ RSpec.describe "Api::V1::CleaningSessions", type: :request do
     end
   end
 
+  describe "POST /api/v1/cleaning_sessions/:id/judge" do
+    let(:session) { CleaningSessionService.start(cleaning_manual: manual, staff_name: "田中", client: client) }
+    let(:photo) do
+      path = Rails.root.join("spec/fixtures/files/test_image.jpg")
+      Rack::Test::UploadedFile.new(path, "image/jpeg")
+    end
+
+    before do
+      mock_response = double("Response",
+        content: [double("Content", type: "text", text: '{"result":"ok","feedback":"合格です"}')]
+      )
+      mock_messages = double("Messages", create: mock_response)
+      mock_client = double("Anthropic::Client", messages: mock_messages)
+      allow(Anthropic::Client).to receive(:new).and_return(mock_client)
+      allow_any_instance_of(CleaningPhotoJudgeService).to receive(:resize_image).and_return(
+        { data: "fake_image_data", media_type: "image/jpeg" }
+      )
+    end
+
+    it "写真を送信してOK判定を受けること" do
+      post "/api/v1/cleaning_sessions/#{session.id}/judge",
+           params: { client_code: client_code, photos: [photo] },
+           headers: authorization_header
+
+      expect(response).to have_http_status(:ok)
+      data = JSON.parse(response.body)
+      expect(data["result"]).to eq("ok")
+      expect(data["feedback"]).to eq("合格です")
+      expect(data["session_status"]).to eq("completed")
+    end
+
+    it "写真なしの場合エラーを返すこと" do
+      post "/api/v1/cleaning_sessions/#{session.id}/judge",
+           params: { client_code: client_code },
+           headers: authorization_header
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "完了済みセッションでは判定できないこと" do
+      session.update!(status: "completed", completed_at: Time.current)
+
+      post "/api/v1/cleaning_sessions/#{session.id}/judge",
+           params: { client_code: client_code, photos: [photo] },
+           headers: authorization_header
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
   describe "PATCH /api/v1/cleaning_sessions/:id/skip" do
     it "ステップをスキップすること" do
       session = CleaningSessionService.start(cleaning_manual: manual, staff_name: "田中", client: client)

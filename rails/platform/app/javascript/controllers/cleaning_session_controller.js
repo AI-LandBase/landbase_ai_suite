@@ -144,7 +144,7 @@ export default class extends Controller {
     this.lastFormData = formData
 
     this.abortController = new AbortController()
-    const timeoutId = setTimeout(() => this.abortController.abort(), 30000)
+    const timeoutId = setTimeout(() => this.abortController.abort(), 60000)
 
     try {
       const response = await fetch(

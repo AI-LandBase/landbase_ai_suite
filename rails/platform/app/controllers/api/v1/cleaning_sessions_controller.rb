@@ -50,6 +50,12 @@ module Api
         step = @session.current_step
         return render_error("判定するステップがありません") unless step
 
+        # 同時リクエストでの重複判定を防止
+        step = @session.cleaning_session_steps.lock.find(step.id)
+        unless step.status.in?(%w[pending failed])
+          return render_error("このステップは既に処理済みです")
+        end
+
         photos = params[:photos] || []
         return render_error("写真を1枚以上送信してください") if photos.empty?
         return render_error("写真は#{MAX_IMAGE_COUNT}枚以下にしてください") if photos.size > MAX_IMAGE_COUNT

@@ -1,8 +1,8 @@
 class CleaningSessionService
   class << self
     def start(cleaning_manual:, staff_name:, client:)
-      manual_data = cleaning_manual.manual_data
-      areas = manual_data["areas"] || manual_data[:areas] || []
+      manual_data = cleaning_manual.manual_data.deep_symbolize_keys
+      areas = manual_data[:areas] || []
 
       session = CleaningSession.new(
         cleaning_manual: cleaning_manual,
@@ -13,15 +13,14 @@ class CleaningSessionService
       )
 
       areas.each_with_index do |area, area_idx|
-        area_name = area["area_name"] || area[:area_name]
-        steps = area["cleaning_steps"] || area[:cleaning_steps] || []
+        steps = area[:cleaning_steps] || []
 
         steps.each_with_index do |step, step_idx|
           session.cleaning_session_steps.build(
-            area_name: area_name,
+            area_name: area[:area_name],
             area_index: area_idx,
             step_index: step_idx,
-            task: step["task"] || step[:task],
+            task: step[:task],
             status: "pending"
           )
         end
@@ -35,10 +34,7 @@ class CleaningSessionService
       step = session.current_step
       return nil unless step
 
-      manual_data = session.cleaning_manual.manual_data
-      areas = manual_data["areas"] || manual_data[:areas] || []
-      area = areas[step.area_index]
-      manual_step = (area["cleaning_steps"] || area[:cleaning_steps] || [])[step.step_index] if area
+      manual_step = find_manual_step(session, step)
 
       {
         step_id: step.id,
@@ -46,9 +42,9 @@ class CleaningSessionService
         area_index: step.area_index,
         step_index: step.step_index,
         task: step.task,
-        description: manual_step && (manual_step["description"] || manual_step[:description]),
-        checkpoint: manual_step && (manual_step["checkpoint"] || manual_step[:checkpoint]),
-        estimated_minutes: manual_step && (manual_step["estimated_minutes"] || manual_step[:estimated_minutes]),
+        description: manual_step&.dig(:description),
+        checkpoint: manual_step&.dig(:checkpoint),
+        estimated_minutes: manual_step&.dig(:estimated_minutes),
         status: step.status,
         attempts_count: step.attempts_count,
         total_steps: session.total_steps_count,
@@ -57,35 +53,31 @@ class CleaningSessionService
     end
 
     def judge(session:, step:, photos:)
-      manual_data = session.cleaning_manual.manual_data
-      areas = manual_data["areas"] || manual_data[:areas] || []
-      area = areas[step.area_index]
-      manual_step = (area["cleaning_steps"] || area[:cleaning_steps] || [])[step.step_index] if area
-
-      description = manual_step && (manual_step["description"] || manual_step[:description]) || ""
-      checkpoint = manual_step && (manual_step["checkpoint"] || manual_step[:checkpoint]) || ""
+      manual_step = find_manual_step(session, step)
 
       judge_result = CleaningPhotoJudgeService.new(
         photos: photos,
         task: step.task,
-        description: description,
-        checkpoint: checkpoint
+        description: manual_step&.dig(:description) || "",
+        checkpoint: manual_step&.dig(:checkpoint) || ""
       ).call
 
       unless judge_result.success?
         return { success: false, error: judge_result.error }
       end
 
+      # DB レベルでインクリメントして race condition を防止
+      CleaningSessionStep.where(id: step.id).update_all("attempts_count = attempts_count + 1")
+      step.reload
+
       attempt = step.cleaning_session_attempts.create!(
-        attempt_number: step.attempts_count + 1,
+        attempt_number: step.attempts_count,
         result: judge_result.result,
         ai_feedback: judge_result.feedback,
         judged_at: Time.current
       )
 
       photos.each { |photo| attempt.photos.attach(photo) }
-
-      step.update!(attempts_count: step.attempts_count + 1)
 
       if judge_result.result == "ok"
         step.update!(status: "passed", passed_at: Time.current)
@@ -165,6 +157,17 @@ class CleaningSessionService
         total_attempts: steps.sum(&:attempts_count),
         area_results: area_results
       }
+    end
+
+    private
+
+    def find_manual_step(session, step)
+      manual_data = session.cleaning_manual.manual_data.deep_symbolize_keys
+      areas = manual_data[:areas] || []
+      area = areas[step.area_index]
+      return nil unless area
+
+      (area[:cleaning_steps] || [])[step.step_index]
     end
   end
 end
