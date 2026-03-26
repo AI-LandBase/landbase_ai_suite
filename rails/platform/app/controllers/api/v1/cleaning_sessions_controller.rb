@@ -60,29 +60,11 @@ module Api
         oversized = photos.select { |img| img.size > MAX_IMAGE_SIZE }
         return render_error("画像は1枚あたり10MB以下にしてください。") if oversized.any?
 
-        # トランザクション内でロック取得→判定→更新を一括実行（重複判定防止）
-        already_processed = false
-        result = ActiveRecord::Base.transaction do
-          locked_step = @session.cleaning_session_steps.lock.find(step.id)
-          unless locked_step.status.in?(%w[pending failed])
-            already_processed = true
-            raise ActiveRecord::Rollback
-          end
-
-          CleaningSessionService.judge(
-            session: @session,
-            step: locked_step,
-            photos: photos
-          )
-        end
-
-        if already_processed
-          return render_error("このステップは既に処理済みです")
-        end
-
-        unless result
-          return render_error("判定処理中にエラーが発生しました")
-        end
+        result = CleaningSessionService.judge(
+          session: @session,
+          step: step,
+          photos: photos
+        )
 
         if result[:success]
           @session.reload

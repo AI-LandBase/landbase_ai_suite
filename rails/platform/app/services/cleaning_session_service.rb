@@ -54,38 +54,46 @@ class CleaningSessionService
     end
 
     def judge(session:, step:, photos:)
+      # 1. ロック取得 + 状態チェック（短いトランザクション）
+      locked_step = ActiveRecord::Base.transaction do
+        s = session.cleaning_session_steps.lock.find(step.id)
+        s.status.in?(%w[pending failed]) ? s : nil
+      end
+      return { success: false, error: "このステップは既に処理済みです" } unless locked_step
+
+      # 2. AI判定（トランザクション外 — ロック保持しない）
       judge_result = CleaningPhotoJudgeService.new(
         photos: photos,
-        task: step.task,
-        description: step.description || "",
-        checkpoint: step.checkpoint || ""
+        task: locked_step.task,
+        description: locked_step.description || "",
+        checkpoint: locked_step.checkpoint || ""
       ).call
 
       unless judge_result.success?
         return { success: false, error: judge_result.error }
       end
 
-      # update_all + create! を一括実行して attempts_count と attempts レコードの不整合を防止
+      # 3. DB更新（短いトランザクション — attempts_count + attempt + status を一括）
       attempt = nil
       ActiveRecord::Base.transaction do
-        CleaningSessionStep.where(id: step.id).update_all("attempts_count = attempts_count + 1")
-        step.reload
+        CleaningSessionStep.where(id: locked_step.id).update_all("attempts_count = attempts_count + 1")
+        locked_step.reload
 
-        attempt = step.cleaning_session_attempts.create!(
-          attempt_number: step.attempts_count,
+        attempt = locked_step.cleaning_session_attempts.create!(
+          attempt_number: locked_step.attempts_count,
           result: judge_result.result,
           ai_feedback: judge_result.feedback,
           judged_at: Time.current
         )
+
+        if judge_result.result == "ok"
+          locked_step.update!(status: "passed", passed_at: Time.current)
+        else
+          locked_step.update!(status: "failed")
+        end
       end
 
       photos.each { |photo| attempt.photos.attach(photo) }
-
-      if judge_result.result == "ok"
-        step.update!(status: "passed", passed_at: Time.current)
-      else
-        step.update!(status: "failed")
-      end
 
       {
         success: true,
