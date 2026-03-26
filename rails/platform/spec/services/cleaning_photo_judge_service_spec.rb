@@ -79,6 +79,20 @@ RSpec.describe CleaningPhotoJudgeService do
       end
     end
 
+    context "AI が不正な result 値を返す場合" do
+      let(:mock_response) do
+        double("Response",
+          content: [double("Content", type: "text", text: '{"result":"pass","feedback":"良い"}')]
+        )
+      end
+
+      it "エラーを返すこと" do
+        result = service.call
+        expect(result.success?).to be false
+        expect(result.error).to include("不正")
+      end
+    end
+
     context "JSON パースエラーの場合" do
       let(:mock_response) do
         double("Response",

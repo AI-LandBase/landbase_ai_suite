@@ -50,12 +50,6 @@ module Api
         step = @session.current_step
         return render_error("判定するステップがありません") unless step
 
-        # 同時リクエストでの重複判定を防止
-        step = @session.cleaning_session_steps.lock.find(step.id)
-        unless step.status.in?(%w[pending failed])
-          return render_error("このステップは既に処理済みです")
-        end
-
         photos = params[:photos] || []
         return render_error("写真を1枚以上送信してください") if photos.empty?
         return render_error("写真は#{MAX_IMAGE_COUNT}枚以下にしてください") if photos.size > MAX_IMAGE_COUNT
@@ -66,20 +60,33 @@ module Api
         oversized = photos.select { |img| img.size > MAX_IMAGE_SIZE }
         return render_error("画像は1枚あたり10MB以下にしてください。") if oversized.any?
 
-        result = CleaningSessionService.judge(
-          session: @session,
-          step: step,
-          photos: photos
-        )
+        # トランザクション内でロック取得→判定→更新を一括実行（重複判定防止）
+        result = ActiveRecord::Base.transaction do
+          locked_step = @session.cleaning_session_steps.lock.find(step.id)
+          unless locked_step.status.in?(%w[pending failed])
+            raise ActiveRecord::Rollback
+          end
+
+          CleaningSessionService.judge(
+            session: @session,
+            step: locked_step,
+            photos: photos
+          )
+        end
+
+        unless result
+          return render_error("このステップは既に処理済みです")
+        end
 
         if result[:success]
+          @session.reload
           auto_complete_if_done
 
           render json: {
             result: result[:result],
             feedback: result[:feedback],
             attempt_number: result[:attempt_number],
-            next_step: CleaningSessionService.current_step_data(@session.reload),
+            next_step: CleaningSessionService.current_step_data(@session),
             session_status: @session.status,
             completed_steps: @session.completed_steps_count,
             total_steps: @session.total_steps_count

@@ -6,6 +6,7 @@ class CleaningPhotoJudgeService
   end
 
   MAX_IMAGE_LONG_EDGE = 1568
+  VALID_RESULTS = %w[ok ng].freeze
 
   SYSTEM_PROMPT = <<~PROMPT
     あなたは宿泊施設の清掃品質を検査する専門家です。
@@ -50,9 +51,15 @@ class CleaningPhotoJudgeService
     json_str = extract_json(text)
     data = JSON.parse(json_str, symbolize_names: true)
 
+    normalized_result = data[:result].to_s.downcase.strip
+    unless VALID_RESULTS.include?(normalized_result)
+      return Result.new(success: false, result: nil, feedback: nil,
+                        error: "AIの判定結果が不正です: #{data[:result]}")
+    end
+
     Result.new(
       success: true,
-      result: data[:result],
+      result: normalized_result,
       feedback: data[:feedback],
       error: nil
     )
