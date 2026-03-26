@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_26_000003) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_26_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -107,6 +107,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_26_000003) do
     t.datetime "passed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "description"
+    t.text "checkpoint"
+    t.integer "estimated_minutes"
     t.index ["cleaning_session_id", "area_index", "step_index"], name: "idx_session_steps_unique", unique: true
     t.index ["cleaning_session_id"], name: "index_cleaning_session_steps_on_cleaning_session_id"
   end

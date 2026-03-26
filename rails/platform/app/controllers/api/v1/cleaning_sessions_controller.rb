@@ -50,7 +50,7 @@ module Api
         step = @session.current_step
         return render_error("判定するステップがありません") unless step
 
-        photos = params[:photos] || []
+        photos = Array.wrap(params[:photos]).select { |p| p.respond_to?(:tempfile) }
         return render_error("写真を1枚以上送信してください") if photos.empty?
         return render_error("写真は#{MAX_IMAGE_COUNT}枚以下にしてください") if photos.size > MAX_IMAGE_COUNT
 
@@ -61,9 +61,11 @@ module Api
         return render_error("画像は1枚あたり10MB以下にしてください。") if oversized.any?
 
         # トランザクション内でロック取得→判定→更新を一括実行（重複判定防止）
+        already_processed = false
         result = ActiveRecord::Base.transaction do
           locked_step = @session.cleaning_session_steps.lock.find(step.id)
           unless locked_step.status.in?(%w[pending failed])
+            already_processed = true
             raise ActiveRecord::Rollback
           end
 
@@ -74,8 +76,12 @@ module Api
           )
         end
 
-        unless result
+        if already_processed
           return render_error("このステップは既に処理済みです")
+        end
+
+        unless result
+          return render_error("判定処理中にエラーが発生しました")
         end
 
         if result[:success]
@@ -119,7 +125,7 @@ module Api
         return render_error("セッションは進行中ではありません") unless @session.in_progress?
 
         CleaningSessionService.suspend(@session)
-        render json: { status: @session.status }
+        render json: { status: @session.reload.status }
       end
 
       # PATCH /api/v1/cleaning_sessions/:id/resume

@@ -21,6 +21,9 @@ class CleaningSessionService
             area_index: area_idx,
             step_index: step_idx,
             task: step[:task],
+            description: step[:description],
+            checkpoint: step[:checkpoint],
+            estimated_minutes: step[:estimated_minutes],
             status: "pending"
           )
         end
@@ -34,17 +37,15 @@ class CleaningSessionService
       step = session.current_step
       return nil unless step
 
-      manual_step = find_manual_step(session, step)
-
       {
         step_id: step.id,
         area_name: step.area_name,
         area_index: step.area_index,
         step_index: step.step_index,
         task: step.task,
-        description: manual_step&.dig(:description),
-        checkpoint: manual_step&.dig(:checkpoint),
-        estimated_minutes: manual_step&.dig(:estimated_minutes),
+        description: step.description,
+        checkpoint: step.checkpoint,
+        estimated_minutes: step.estimated_minutes,
         status: step.status,
         attempts_count: step.attempts_count,
         total_steps: session.total_steps_count,
@@ -53,13 +54,11 @@ class CleaningSessionService
     end
 
     def judge(session:, step:, photos:)
-      manual_step = find_manual_step(session, step)
-
       judge_result = CleaningPhotoJudgeService.new(
         photos: photos,
         task: step.task,
-        description: manual_step&.dig(:description) || "",
-        checkpoint: manual_step&.dig(:checkpoint) || ""
+        description: step.description || "",
+        checkpoint: step.checkpoint || ""
       ).call
 
       unless judge_result.success?
@@ -157,17 +156,6 @@ class CleaningSessionService
         total_attempts: steps.sum(&:attempts_count),
         area_results: area_results
       }
-    end
-
-    private
-
-    def find_manual_step(session, step)
-      manual_data = session.cleaning_manual.manual_data.deep_symbolize_keys
-      areas = manual_data[:areas] || []
-      area = areas[step.area_index]
-      return nil unless area
-
-      (area[:cleaning_steps] || [])[step.step_index]
     end
   end
 end

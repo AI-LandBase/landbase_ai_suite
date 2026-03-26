@@ -199,6 +199,10 @@ export default class extends Controller {
   }
 
   retryJudge() {
+    if (this.files.length === 0) {
+      this.showError("写真を撮影してから再試行してください。")
+      return
+    }
     this.hideError()
     this.judgeStep()
   }

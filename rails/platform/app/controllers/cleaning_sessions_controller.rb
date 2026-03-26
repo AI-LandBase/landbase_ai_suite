@@ -23,8 +23,8 @@ class CleaningSessionsController < ApplicationController
   private
 
   def set_client
-    @client_code = params[:client_code] || ""
-    @client = Client.find_by(code: @client_code)
+    @client_code = params[:client_code].presence || ""
+    @client = Client.find_by(code: @client_code) if @client_code.present?
   end
 
   def require_feature!

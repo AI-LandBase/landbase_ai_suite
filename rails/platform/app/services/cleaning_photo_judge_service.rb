@@ -124,10 +124,7 @@ class CleaningPhotoJudgeService
                       .call
     { data: File.binread(result.path), media_type: "image/jpeg" }
   ensure
-    if result.respond_to?(:close)
-      result.close
-      result.unlink if result.respond_to?(:unlink)
-    end
+    result.close! if result.respond_to?(:close!)
     photo.rewind if photo.respond_to?(:rewind)
   end
 
@@ -140,6 +137,6 @@ class CleaningPhotoJudgeService
   end
 
   def client
-    @client ||= Anthropic::Client.new(timeout: 30.0)
+    @client ||= Anthropic::Client.new(timeout: 45.0)
   end
 end
