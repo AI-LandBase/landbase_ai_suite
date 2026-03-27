@@ -1,0 +1,69 @@
+<% content_for(:title) { "#{@report.display_year_month} 月次レポート" } %>
+
+<% content_for(:breadcrumb) do %>
+  <%= render "shared/breadcrumb", items: [
+    { label: "月次レポート一覧", path: monthly_reports_path(client_code: @client_code) },
+    { label: @report.display_year_month }
+  ] %>
+<% end %>
+
+<div class="w-full max-w-4xl mx-auto">
+  <!-- ヘッダーカード -->
+  <div class="bg-gray-900 shadow rounded-lg p-6 mb-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-gray-100"><%= @report.display_year_month %> 月次オペレーション分析レポート</h1>
+        <p class="text-gray-400 text-sm mt-2">
+          <span class="inline-flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            生成: <%= @report.generated_at&.strftime("%Y/%m/%d %H:%M") || "—" %>
+          </span>
+          <span class="ml-4">
+            <% if @report.status == "published" %>
+              <%= render "shared/badge", label: "公開", variant: :success %>
+            <% else %>
+              <%= render "shared/badge", label: "下書き", variant: :warning %>
+            <% end %>
+          </span>
+        </p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <%= link_to download_monthly_report_path(@report, client_code: @client_code),
+              class: "inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-gray-700 text-gray-300 text-sm hover:bg-gray-600 transition-colors" do %>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          PDF
+        <% end %>
+        <button onclick="window.print()"
+                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-gray-700 text-gray-300 text-sm hover:bg-gray-600 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          印刷
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- レポート本文 -->
+  <div class="bg-gray-900 shadow rounded-lg p-8 report-content
+              print:bg-white print:shadow-none">
+    <%= @rendered_content %>
+  </div>
+
+  <!-- フッターアクション -->
+  <div class="mt-6 flex items-center justify-between pb-8">
+    <%= link_to monthly_reports_path(client_code: @client_code),
+          class: "inline-flex items-center gap-1 text-teal-400 hover:text-teal-300 text-sm" do %>
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      一覧に戻る
+    <% end %>
+    <div class="flex items-center gap-3">
+      <%= form_tag generate_monthly_reports_path, method: :post, class: "inline" do %>
+        <input type="hidden" name="client_code" value="<%= @client_code %>">
+        <input type="hidden" name="year_month" value="<%= @report.year_month %>">
+        <%= render "shared/button", label: "再生成", variant: :edit, type: "submit", size: :sm %>
+      <% end %>
+      <%= button_to "削除", monthly_report_path(@report, client_code: @client_code), method: :delete,
+            form: { data: { turbo_confirm: "「#{@report.display_year_month}」のレポートを削除しますか？\nこの操作は取り消せません。" } },
+            class: "inline-flex items-center px-3 py-1.5 rounded-md border border-red-600 text-red-400 text-xs hover:bg-red-600 hover:text-white transition-colors cursor-pointer" %>
+    </div>
+  </div>
+</div>

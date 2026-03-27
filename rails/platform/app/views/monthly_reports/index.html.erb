@@ -1,0 +1,54 @@
+<% content_for(:title) { "月次レポート一覧" } %>
+
+<div class="w-full max-w-4xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold">月次レポート一覧</h1>
+  </div>
+
+  <% if @client %>
+    <!-- 生成フォーム -->
+    <%= form_tag generate_monthly_reports_path, method: :post, class: "mb-6 flex gap-4 items-end" do %>
+      <input type="hidden" name="client_code" value="<%= @client_code %>">
+      <div>
+        <label for="year_month" class="block text-sm font-medium text-gray-300 mb-1">対象年月</label>
+        <input type="month" name="year_month" id="year_month"
+               value="<%= Date.current.strftime('%Y-%m') %>"
+               class="rounded-md border-gray-600 bg-gray-800 text-gray-100 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border">
+      </div>
+      <%= render "shared/button", label: "レポート生成", type: "submit" %>
+    <% end %>
+  <% end %>
+
+  <% if @client_code.blank? %>
+    <p class="text-gray-400">クライアントコードを入力して検索してください。</p>
+  <% elsif @reports.empty? %>
+    <p class="text-gray-400">レポートがありません。上のフォームからレポートを生成してください。</p>
+  <% else %>
+    <%= render "shared/table", headers: ["年月", "ステータス", "生成日時", ""] do %>
+      <% @reports.each do |report| %>
+        <tr class="hover:bg-gray-800">
+          <td class="px-6 py-4 text-sm text-gray-100 font-medium"><%= report.display_year_month %></td>
+          <td class="px-6 py-4 text-sm">
+            <% if report.status == "published" %>
+              <%= render "shared/badge", label: "公開", variant: :success %>
+            <% else %>
+              <%= render "shared/badge", label: "下書き", variant: :warning %>
+            <% end %>
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-400">
+            <%= report.generated_at&.strftime("%Y/%m/%d %H:%M") || "—" %>
+          </td>
+          <td class="px-6 py-4 text-sm text-right">
+            <div class="flex items-center justify-end gap-2">
+              <%= link_to "閲覧", monthly_report_path(report, client_code: @client_code),
+                    class: "inline-flex items-center px-4 py-2 rounded-md bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors" %>
+              <%= button_to "削除", monthly_report_path(report, client_code: @client_code), method: :delete,
+                    form: { data: { turbo_confirm: "「#{report.display_year_month}」のレポートを削除しますか？\nこの操作は取り消せません。" } },
+                    class: "inline-flex items-center px-3 py-2 rounded-md border border-red-600 text-red-400 text-xs hover:bg-red-600 hover:text-white transition-colors" %>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

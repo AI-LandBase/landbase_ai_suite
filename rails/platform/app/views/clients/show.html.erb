@@ -47,6 +47,11 @@
       <p class="text-sm text-gray-400">請求書PDFをAIで仕訳データに変換</p>
     <% end %>
 
+    <%= render "shared/card", href: monthly_reports_path(client_code: @client.code), hover: true do %>
+      <h2 class="text-lg font-semibold text-gray-100 mb-2">月次レポート</h2>
+      <p class="text-sm text-gray-400">仕訳データからAI生成の月次オペレーション分析レポート</p>
+    <% end %>
+
     <% if @client.feature_available?(:cleaning_manuals) %>
     <%= render "shared/card", href: cleaning_manuals_path(client_code: @client.code), hover: true do %>
       <h2 class="text-lg font-semibold text-gray-100 mb-2">清掃マニュアル</h2>

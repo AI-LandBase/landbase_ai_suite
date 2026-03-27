@@ -16,6 +16,7 @@ RUN apt-get update -qq \
         libjemalloc2 \
         libvips \
         postgresql-client \
+        fonts-ipafont-gothic \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 

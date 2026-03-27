@@ -57,12 +57,17 @@ gem "anthropic"
 
 # === PDF処理 ===
 gem "combine_pdf"
+gem "prawn"
+gem "prawn-table"
 
 # === CSV出力（Ruby 3.4+で必須） ===
 gem "csv"
 
 # === ページネーション ===
 gem "kaminari"
+
+# === Markdownレンダリング ===
+gem "redcarpet"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
