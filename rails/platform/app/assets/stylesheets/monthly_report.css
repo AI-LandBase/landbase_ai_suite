@@ -1,0 +1,217 @@
+/* 月次レポート詳細画面のMarkdownスタイル */
+
+.report-content {
+  color: #d1d5db;
+  line-height: 1.75;
+  font-size: 0.95rem;
+}
+
+/* 見出し */
+.report-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #374151;
+}
+
+.report-content h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #374151;
+}
+
+.report-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.report-content h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* 段落 */
+.report-content p {
+  margin-bottom: 0.75rem;
+}
+
+/* 強調 */
+.report-content strong {
+  color: #f3f4f6;
+  font-weight: 600;
+}
+
+.report-content em {
+  font-style: italic;
+  color: #d1d5db;
+}
+
+/* リスト */
+.report-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.report-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.report-content li {
+  margin-bottom: 0.35rem;
+  color: #d1d5db;
+}
+
+.report-content li strong {
+  color: #f3f4f6;
+}
+
+/* テーブル */
+.report-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.report-content thead {
+  background-color: #1f2937;
+}
+
+.report-content th {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #9ca3af;
+  border-bottom: 2px solid #374151;
+  white-space: nowrap;
+}
+
+.report-content td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #374151;
+  color: #d1d5db;
+}
+
+.report-content tbody tr:hover {
+  background-color: rgba(31, 41, 55, 0.5);
+}
+
+/* 区切り線 */
+.report-content hr {
+  border: none;
+  border-top: 1px solid #374151;
+  margin: 1.5rem 0;
+}
+
+/* コードブロック */
+.report-content code {
+  background-color: #1f2937;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.85rem;
+  color: #5eead4;
+}
+
+.report-content pre {
+  background-color: #1f2937;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.report-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* 引用 */
+.report-content blockquote {
+  border-left: 4px solid #5eead4;
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  background-color: rgba(94, 234, 212, 0.05);
+  color: #9ca3af;
+}
+
+.report-content blockquote p {
+  margin-bottom: 0;
+}
+
+/* リンク */
+.report-content a {
+  color: #5eead4;
+  text-decoration: underline;
+}
+
+.report-content a:hover {
+  color: #99f6e4;
+}
+
+/* 印刷用スタイル */
+@media print {
+  .report-content {
+    color: #111;
+    font-size: 11pt;
+  }
+
+  .report-content h1,
+  .report-content h2,
+  .report-content h3,
+  .report-content h4,
+  .report-content strong {
+    color: #000;
+  }
+
+  .report-content h1,
+  .report-content h2 {
+    border-bottom-color: #ccc;
+  }
+
+  .report-content th {
+    background-color: #f0f0f0;
+    color: #333;
+    border-bottom-color: #999;
+  }
+
+  .report-content td {
+    color: #111;
+    border-bottom-color: #ddd;
+  }
+
+  .report-content hr {
+    border-top-color: #ccc;
+  }
+
+  .report-content blockquote {
+    border-left-color: #999;
+    background: none;
+    color: #555;
+  }
+
+  .report-content code {
+    background-color: #f5f5f5;
+    color: #333;
+  }
+
+  .report-content pre {
+    background-color: #f5f5f5;
+  }
+}
