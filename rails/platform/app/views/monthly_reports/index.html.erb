@@ -38,11 +38,14 @@
           <td class="px-6 py-4 text-sm text-gray-400">
             <%= report.generated_at&.strftime("%Y/%m/%d %H:%M") || "—" %>
           </td>
-          <td class="px-6 py-4 text-sm text-right space-x-3">
-            <%= link_to "閲覧", monthly_report_path(report, client_code: @client_code), class: "text-teal-400 hover:text-teal-300" %>
-            <%= button_to "削除", monthly_report_path(report, client_code: @client_code), method: :delete,
-                  form: { data: { turbo_confirm: "#{report.display_year_month} のレポートを削除しますか？" } },
-                  class: "text-red-400 hover:text-red-300" %>
+          <td class="px-6 py-4 text-sm text-right">
+            <div class="flex items-center justify-end gap-2">
+              <%= link_to "閲覧", monthly_report_path(report, client_code: @client_code),
+                    class: "inline-flex items-center px-4 py-2 rounded-md bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors" %>
+              <%= button_to "削除", monthly_report_path(report, client_code: @client_code), method: :delete,
+                    form: { data: { turbo_confirm: "「#{report.display_year_month}」のレポートを削除しますか？\nこの操作は取り消せません。" } },
+                    class: "inline-flex items-center px-3 py-2 rounded-md border border-red-600 text-red-400 text-xs hover:bg-red-600 hover:text-white transition-colors" %>
+            </div>
           </td>
         </tr>
       <% end %>
