@@ -48,13 +48,14 @@ class MonthlyReportGeneratorService
 
     ### レポートの基本構成（Markdown形式で出力）
 
-    1. **エグゼクティブサマリー** — 3〜5行で当月の経営状態を要約
-    2. **収支概要** — 売上・費用・利益の概要をテーブル形式で表示
+    1. **エグゼクティブサマリー** — 3〜5行で当月の経営状態を要約（前月比の変化を含む）
+    2. **収支概要** — 売上・費用・利益の概要をテーブル形式で表示（前月比の増減額・増減率を併記）
     3. **勘定科目別分析** — 主要な勘定科目ごとの金額・前月比・特記事項
-    4. **業種固有の分析** — 業種に応じた専門的な分析（後述のプロンプトに従う）
-    5. **リスク・注意事項** — 異常値、要確認事項、経営上の懸念点
-    6. **改善提案** — データに基づく具体的なアクションアイテム（3〜5件）
-    7. **次月の見通し** — 季節要因やトレンドに基づく予測
+    4. **前月比較分析** — 前月データが提供されている場合、主要科目の増減と要因を分析
+    5. **業種固有の分析** — 業種に応じた専門的な分析（後述のプロンプトに従う）
+    6. **リスク・注意事項** — 異常値、要確認事項、経営上の懸念点
+    7. **改善提案** — データに基づく具体的なアクションアイテム（3〜5件）
+    8. **次月の見通し** — 季節要因やトレンドに基づく予測
 
     ### 出力ルール
     - **Markdown形式**で出力する（JSON不要）
@@ -107,6 +108,29 @@ class MonthlyReportGeneratorService
                           .includes(:journal_entry_lines)
                           .to_a
 
+    current = summarize_entries(entries)
+    current[:entries_sample] = entries.first(500).map { |e|
+      {
+        date: e.date,
+        description: e.description,
+        source_type: e.source_type,
+        debits: e.debit_lines.map { |l| { account: l.account, sub_account: l.sub_account, amount: l.amount.to_i } },
+        credits: e.credit_lines.map { |l| { account: l.account, sub_account: l.sub_account, amount: l.amount.to_i } }
+      }
+    }
+
+    prev_range = parse_previous_month_range
+    prev_entries = JournalEntry.where(client: @client)
+                               .in_period(prev_range.first, prev_range.last)
+                               .includes(:journal_entry_lines)
+                               .to_a
+    current[:previous_month] = summarize_entries(prev_entries)
+    current[:previous_year_month] = prev_range.first.strftime("%Y-%m")
+
+    current
+  end
+
+  def summarize_entries(entries)
     debit_summary = {}
     credit_summary = {}
 
@@ -126,16 +150,7 @@ class MonthlyReportGeneratorService
       total_debit: debit_summary.values.sum,
       total_credit: credit_summary.values.sum,
       debit_by_account: debit_summary.sort_by { |_, v| -v }.to_h,
-      credit_by_account: credit_summary.sort_by { |_, v| -v }.to_h,
-      entries_sample: entries.first(500).map { |e|
-        {
-          date: e.date,
-          description: e.description,
-          source_type: e.source_type,
-          debits: e.debit_lines.map { |l| { account: l.account, sub_account: l.sub_account, amount: l.amount.to_i } },
-          credits: e.credit_lines.map { |l| { account: l.account, sub_account: l.sub_account, amount: l.amount.to_i } }
-        }
-      }
+      credit_by_account: credit_summary.sort_by { |_, v| -v }.to_h
     }
   end
 
@@ -149,6 +164,9 @@ class MonthlyReportGeneratorService
       - **主要取引先分析**: 支出上位の取引先と傾向
     FALLBACK
 
+    prev = journal_data[:previous_month]
+    prev_section = build_previous_month_section(journal_data)
+
     <<~PROMPT
       以下のクライアントの #{@year_month} 月次オペレーション分析レポートを作成してください。
 
@@ -159,18 +177,20 @@ class MonthlyReportGeneratorService
 
       #{industry_prompt}
 
-      ### 仕訳データサマリー
+      ### 当月（#{@year_month}）仕訳データサマリー
       - 仕訳件数: #{journal_data[:entries_count]}件
       - 借方合計: #{journal_data[:total_debit].then { |v| delimited(v) }}円
       - 貸方合計: #{journal_data[:total_credit].then { |v| delimited(v) }}円
 
-      ### 借方（費用・資産）科目別集計
+      ### 当月 借方（費用・資産）科目別集計
       #{format_account_summary(journal_data[:debit_by_account])}
 
-      ### 貸方（収益・負債）科目別集計
+      ### 当月 貸方（収益・負債）科目別集計
       #{format_account_summary(journal_data[:credit_by_account])}
 
-      ### 仕訳明細データ（最大500件）
+      #{prev_section}
+
+      ### 当月 仕訳明細データ（最大500件）
       #{journal_data[:entries_sample].map { |e| format_entry(e) }.join("\n")}
     PROMPT
   end
@@ -191,11 +211,43 @@ class MonthlyReportGeneratorService
     "- #{entry[:date]} | #{entry[:description]} | 借方: #{debits} | 貸方: #{credits}"
   end
 
+  def build_previous_month_section(journal_data)
+    prev = journal_data[:previous_month]
+    prev_ym = journal_data[:previous_year_month]
+
+    return "### 前月比較データ\n（前月の仕訳データがありません）" if prev[:entries_count] == 0
+
+    <<~SECTION
+      ### 前月（#{prev_ym}）比較データ
+      - 仕訳件数: #{prev[:entries_count]}件
+      - 借方合計: #{prev[:total_debit].then { |v| delimited(v) }}円
+      - 貸方合計: #{prev[:total_credit].then { |v| delimited(v) }}円
+
+      #### 前月 借方科目別集計
+      #{format_account_summary(prev[:debit_by_account])}
+
+      #### 前月 貸方科目別集計
+      #{format_account_summary(prev[:credit_by_account])}
+
+      ### 前月比較の分析指示
+      上記の前月データと当月データを比較し、以下を分析に含めてください：
+      - 各勘定科目の前月比（増減額・増減率）
+      - 大きな変動がある科目の要因分析
+      - 収支バランスの前月からの変化傾向
+    SECTION
+  end
+
   def parse_year_month_range
     year, month = @year_month.split("-").map(&:to_i)
     start_date = Date.new(year, month, 1)
     end_date = start_date.end_of_month
     start_date..end_date
+  end
+
+  def parse_previous_month_range
+    year, month = @year_month.split("-").map(&:to_i)
+    prev_date = Date.new(year, month, 1) - 1.month
+    prev_date..prev_date.end_of_month
   end
 
   def save_report(content)
