@@ -306,6 +306,7 @@ GEM
       erb
       psych (>= 4.0.0)
       tsort
+    redcarpet (3.6.1)
     regexp_parser (2.11.3)
     reline (0.6.3)
       io-console (~> 0.5)
@@ -463,6 +464,7 @@ DEPENDENCIES
   rack-cors
   rails (~> 8.0.2, >= 8.0.2.1)
   rails-i18n
+  redcarpet
   rspec-rails
   rubocop-rails-omakase
   solid_cable
