@@ -2,13 +2,13 @@
 
 .report-content {
   color: #d1d5db;
-  line-height: 1.75;
-  font-size: 0.95rem;
+  line-height: 1.8;
+  font-size: 1.05rem;
 }
 
 /* 見出し */
 .report-content h1 {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: #f3f4f6;
   margin-top: 2rem;
@@ -18,7 +18,7 @@
 }
 
 .report-content h2 {
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #f3f4f6;
   margin-top: 2rem;
@@ -28,7 +28,7 @@
 }
 
 .report-content h3 {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #e5e7eb;
   margin-top: 1.5rem;
@@ -36,7 +36,7 @@
 }
 
 .report-content h4 {
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #e5e7eb;
   margin-top: 1.25rem;
@@ -87,7 +87,7 @@
   border-collapse: collapse;
   margin-top: 0.5rem;
   margin-bottom: 1rem;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
 }
 
 .report-content thead {
@@ -125,7 +125,7 @@
   background-color: #1f2937;
   padding: 0.15rem 0.4rem;
   border-radius: 0.25rem;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: #5eead4;
 }
 
