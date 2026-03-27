@@ -190,13 +190,54 @@ docker compose -f compose.development.yaml --env-file .env.development exec plat
 
 ---
 
-## テスト結果（2026-03-27）
+## テスト結果（2026-03-27 PR前検証）
 
 ```
-MonthlyReport モデル:     17 examples, 0 failures
-MonthlyReportGeneratorService: 8 examples, 0 failures
-Web::MonthlyReports:      10 examples, 0 failures
-合計:                     35 examples, 0 failures
+MonthlyReport モデル:              17 examples, 0 failures
+MonthlyReportGeneratorService:      8 examples, 0 failures
+Web::MonthlyReports:               13 examples, 0 failures
+合計（月次レポート関連）:            38 examples, 0 failures
 
-全テスト:                 519 examples, 0 failures
+全テスト:                          522 examples, 0 failures
 ```
+
+### 検証済み項目
+
+| カテゴリ | 項目 | 結果 |
+|---------|------|------|
+| **FR-1** | データモデル（5カラム + ユニーク制約 + for_clientスコープ） | OK |
+| **FR-2** | CRUD画面（一覧・詳細・削除・手動生成） | OK |
+| **FR-3** | AIレポート生成（業種別プロンプト4種 + 前月比較） | OK |
+| **FR-4** | Claude Code skill (`/monthly-report`) | OK |
+| **FR-5** | Rakeタスク月次自動実行（動作確認済み） | OK |
+| **NFR-1** | パフォーマンス（timeout 120秒、実測89秒以内） | OK |
+| **NFR-2** | マルチテナント分離 + 認証 | OK |
+| **NFR-3** | 業種別プロンプトの追加・変更容易性 | OK |
+| **セキュリティ** | XSS対策（sanitize）、CSRF、SQLi、テナント漏洩 | OK |
+| **パフォーマンス** | N+1解消（includes + to_a）、明細500件制限 | OK |
+| **Nice to Have** | PDFエクスポート（prawn、日本語フォント対応） | OK |
+| **Nice to Have** | 前月比較分析（前月仕訳データ自動取得） | OK |
+| **UI** | 閲覧/削除ボタンの視認性・押し間違い防止 | OK |
+| **UI** | 詳細画面のMarkdownスタイリング（カスタムCSS） | OK |
+| **PDF** | Web画面と同一パイプライン（redcarpet → Nokogiri → Prawn） | OK |
+| **他環境** | Dockerfile.platformにフォント追加、フォールバック対応 | OK |
+
+### Rakeタスク動作確認結果
+
+```
+=== 月次レポート生成 (2026-02) ===
+対象クライアント数: 5
+  デモ会社 (demo)... NG: 2026-02 の仕訳データがありません
+  client (client)... NG: 2026-02 の仕訳データがありません
+  weblab (weblab)... NG: 2026-02 の仕訳データがありません
+  uriage (uriage)... NG: 2026-02 の仕訳データがありません
+  沖縄ヴィラ民泊テスト (minpaku_test)... OK
+=== 完了: 成功 1件, 失敗 4件 ===
+```
+
+### PDF出力検証
+
+- テストクライアント: 沖縄ヴィラ民泊テスト（hotel業種）
+- テストデータ: 2月9件 + 3月14件の仕訳データ
+- PDF生成: 262KB、A4、日本語フォント（IPAゴシック）
+- Web画面と同一のredcarpetパイプラインで内容一致を確認
