@@ -105,6 +105,7 @@ class MonthlyReportGeneratorService
     entries = JournalEntry.where(client: @client)
                           .in_period(date_range.first, date_range.last)
                           .includes(:journal_entry_lines)
+                          .to_a
 
     debit_summary = {}
     credit_summary = {}
@@ -126,7 +127,7 @@ class MonthlyReportGeneratorService
       total_credit: credit_summary.values.sum,
       debit_by_account: debit_summary.sort_by { |_, v| -v }.to_h,
       credit_by_account: credit_summary.sort_by { |_, v| -v }.to_h,
-      entries_sample: entries.limit(500).map { |e|
+      entries_sample: entries.first(500).map { |e|
         {
           date: e.date,
           description: e.description,

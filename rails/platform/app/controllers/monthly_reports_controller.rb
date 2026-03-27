@@ -1,4 +1,6 @@
 class MonthlyReportsController < ApplicationController
+  include ActionView::Helpers::SanitizeHelper
+
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
   before_action :set_client
@@ -58,6 +60,10 @@ class MonthlyReportsController < ApplicationController
     redirect_to monthly_reports_path(client_code: @client_code), alert: "レポートが見つかりません"
   end
 
+  ALLOWED_TAGS = %w[h1 h2 h3 h4 h5 h6 p a ul ol li table thead tbody tr th td
+                    strong em del code pre blockquote br hr mark sup sub].freeze
+  ALLOWED_ATTRIBUTES = %w[href target rel class].freeze
+
   def render_markdown(text)
     renderer = Redcarpet::Render::HTML.new(
       hard_wrap: true,
@@ -70,6 +76,7 @@ class MonthlyReportsController < ApplicationController
       strikethrough: true,
       highlight: true
     )
-    markdown.render(text).html_safe
+    raw_html = markdown.render(text)
+    sanitize(raw_html, tags: ALLOWED_TAGS, attributes: ALLOWED_ATTRIBUTES)
   end
 end
