@@ -21,7 +21,7 @@ class MonthlyReportPdfService
       }
     )
 
-    register_fonts(pdf)
+    @japanese_available = register_fonts(pdf)
     render_header(pdf)
     render_body(pdf)
     render_footer(pdf)
@@ -40,28 +40,44 @@ class MonthlyReportPdfService
         }
       )
       pdf.font "NotoSansJP"
-    else
-      begin
-        ipa_path = find_japanese_font
-        if ipa_path
-          pdf.font_families.update(
-            "IPAGothic" => { normal: ipa_path, bold: ipa_path }
-          )
-          pdf.font "IPAGothic"
-        end
-      rescue Prawn::Errors::UnknownFont, ArgumentError
-        # フォントが見つからない場合はデフォルトフォントを使用
-      end
+      return true
     end
+
+    ipa_path = find_japanese_font
+    if ipa_path
+      pdf.font_families.update(
+        "IPAGothic" => { normal: ipa_path, bold: ipa_path }
+      )
+      pdf.font "IPAGothic"
+      return true
+    end
+
+    false
+  rescue Prawn::Errors::UnknownFont, ArgumentError
+    false
+  end
+
+  def safe_text(pdf, text, **opts)
+    pdf.text(text, **opts)
+  rescue Prawn::Errors::IncompatibleStringEncoding
+    ascii_text = text.encode("ASCII", undef: :replace, replace: "?")
+    pdf.text(ascii_text, **opts)
   end
 
   def render_header(pdf)
-    pdf.text "月次オペレーション分析レポート", size: 18, style: :bold
-    pdf.move_down 8
-
-    pdf.text "#{@client.name}（#{@client.code}）", size: 12
-    pdf.text "対象期間: #{@report.display_year_month}", size: 10, color: "666666"
-    pdf.text "生成日時: #{@report.generated_at&.strftime('%Y/%m/%d %H:%M')}", size: 10, color: "666666"
+    if @japanese_available
+      safe_text pdf, "月次オペレーション分析レポート", size: 18, style: :bold
+      pdf.move_down 8
+      safe_text pdf, "#{@client.name}（#{@client.code}）", size: 12
+      safe_text pdf, "対象期間: #{@report.display_year_month}", size: 10, color: "666666"
+      safe_text pdf, "生成日時: #{@report.generated_at&.strftime('%Y/%m/%d %H:%M')}", size: 10, color: "666666"
+    else
+      safe_text pdf, "Monthly Operation Report", size: 18, style: :bold
+      pdf.move_down 8
+      safe_text pdf, "#{@client.code}", size: 12
+      safe_text pdf, "Period: #{@report.year_month}", size: 10, color: "666666"
+      safe_text pdf, "Generated: #{@report.generated_at&.strftime('%Y/%m/%d %H:%M')}", size: 10, color: "666666"
+    end
 
     pdf.move_down 4
     pdf.stroke_horizontal_rule
@@ -123,18 +139,18 @@ class MonthlyReportPdfService
     size = sizes.fetch(level, 14)
 
     pdf.move_down 8
-    pdf.text strip_markdown(text), size: size, style: :bold
+    safe_text pdf, strip_markdown(text), size: size, style: :bold
     pdf.move_down 4
   end
 
   def render_paragraph(pdf, text)
-    pdf.text strip_markdown(text), size: 10, leading: 4
+    safe_text pdf, strip_markdown(text), size: 10, leading: 4
   end
 
   def render_list(pdf, items)
     items.each do |item|
       pdf.indent(16) do
-        pdf.text "• #{strip_markdown(item)}", size: 10, leading: 4
+        safe_text pdf, "- #{strip_markdown(item)}", size: 10, leading: 4
       end
     end
     pdf.move_down 4
@@ -143,7 +159,7 @@ class MonthlyReportPdfService
   def render_ordered_list(pdf, items)
     items.each_with_index do |item, idx|
       pdf.indent(16) do
-        pdf.text "#{idx + 1}. #{strip_markdown(item)}", size: 10, leading: 4
+        safe_text pdf, "#{idx + 1}. #{strip_markdown(item)}", size: 10, leading: 4
       end
     end
     pdf.move_down 4
@@ -177,10 +193,10 @@ class MonthlyReportPdfService
   end
 
   def render_footer(pdf)
+    footer_text = "LandBase AI Suite - #{@client.code} - #{@report.year_month}"
     pdf.repeat(:all) do
       pdf.bounding_box([ 0, 20 ], width: pdf.bounds.width, height: 20) do
-        pdf.text "LandBase AI Suite — #{@client.name} — #{@report.display_year_month}",
-                 size: 8, color: "999999", align: :center
+        pdf.text footer_text, size: 8, color: "999999", align: :center
       end
     end
 
