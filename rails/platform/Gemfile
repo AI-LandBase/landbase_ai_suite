@@ -57,6 +57,8 @@ gem "anthropic"
 
 # === PDF処理 ===
 gem "combine_pdf"
+gem "prawn"
+gem "prawn-table"
 
 # === CSV出力（Ruby 3.4+で必須） ===
 gem "csv"

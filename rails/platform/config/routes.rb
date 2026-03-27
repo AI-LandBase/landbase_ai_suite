@@ -67,6 +67,9 @@ Rails.application.routes.draw do
   resources :bank_statements, only: [ :new ]
   resources :invoices, only: [ :new ]
   resources :monthly_reports, only: [ :index, :show, :destroy ] do
+    member do
+      get :download
+    end
     collection do
       post :generate
     end

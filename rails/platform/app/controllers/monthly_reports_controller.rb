@@ -4,7 +4,7 @@ class MonthlyReportsController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
   before_action :set_client
-  before_action :set_report, only: [ :show, :destroy ]
+  before_action :set_report, only: [ :show, :destroy, :download ]
 
   def index
     @reports = if @client
@@ -38,6 +38,13 @@ class MonthlyReportsController < ApplicationController
     else
       redirect_to monthly_reports_path(client_code: @client_code), alert: "レポート生成に失敗しました: #{result.error}"
     end
+  end
+
+  def download
+    pdf_data = MonthlyReportPdfService.new(report: @report).call
+    filename = "#{@report.client.code}_#{@report.year_month}_月次レポート.pdf"
+
+    send_data pdf_data, filename: filename, type: "application/pdf", disposition: "attachment"
   end
 
   def destroy

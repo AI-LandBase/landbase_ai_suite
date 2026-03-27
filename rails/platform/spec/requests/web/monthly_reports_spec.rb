@@ -75,6 +75,34 @@ RSpec.describe "Web::MonthlyReports", type: :request do
     end
   end
 
+  describe "GET /monthly_reports/:id/download" do
+    let(:report) { create(:monthly_report, client: client, year_month: "2026-05") }
+
+    context "認証済みの場合" do
+      before { sign_in user }
+
+      it "PDFファイルを返すこと" do
+        get download_monthly_report_path(report, client_code: client.code)
+        expect(response).to have_http_status(:ok)
+        expect(response.content_type).to include("application/pdf")
+      end
+
+      it "Content-Dispositionがattachmentであること" do
+        get download_monthly_report_path(report, client_code: client.code)
+        expect(response.headers["Content-Disposition"]).to include("attachment")
+        expect(response.headers["Content-Disposition"]).to include(".pdf")
+      end
+
+      it "他クライアントのレポートはダウンロードできないこと" do
+        other_client = create(:client, code: "mr_dl_other")
+        other_report = create(:monthly_report, client: other_client, year_month: "2026-05")
+
+        get download_monthly_report_path(other_report, client_code: client.code)
+        expect(response).to redirect_to(monthly_reports_path(client_code: client.code))
+      end
+    end
+  end
+
   describe "DELETE /monthly_reports/:id" do
     let!(:report) { create(:monthly_report, client: client, year_month: "2026-04") }
 
