@@ -160,8 +160,8 @@ class MonthlyReportGeneratorService
 
       ### 仕訳データサマリー
       - 仕訳件数: #{journal_data[:entries_count]}件
-      - 借方合計: #{journal_data[:total_debit].to_s(:delimited)}円
-      - 貸方合計: #{journal_data[:total_credit].to_s(:delimited)}円
+      - 借方合計: #{journal_data[:total_debit].then { |v| delimited(v) }}円
+      - 貸方合計: #{journal_data[:total_credit].then { |v| delimited(v) }}円
 
       ### 借方（費用・資産）科目別集計
       #{format_account_summary(journal_data[:debit_by_account])}
@@ -178,15 +178,15 @@ class MonthlyReportGeneratorService
     return "（データなし）" if account_hash.empty?
 
     lines = account_hash.map do |account, amount|
-      "| #{account} | #{amount.to_s(:delimited)}円 |"
+      "| #{account} | #{amount.then { |v| delimited(v) }}円 |"
     end
 
     "| 勘定科目 | 金額 |\n|---|---|\n#{lines.join("\n")}"
   end
 
   def format_entry(entry)
-    debits = entry[:debits].map { |d| "#{d[:account]}#{d[:sub_account].present? ? "/#{d[:sub_account]}" : ""} #{d[:amount].to_s(:delimited)}円" }.join(", ")
-    credits = entry[:credits].map { |c| "#{c[:account]}#{c[:sub_account].present? ? "/#{c[:sub_account]}" : ""} #{c[:amount].to_s(:delimited)}円" }.join(", ")
+    debits = entry[:debits].map { |d| "#{d[:account]}#{d[:sub_account].present? ? "/#{d[:sub_account]}" : ""} #{d[:amount].then { |v| delimited(v) }}円" }.join(", ")
+    credits = entry[:credits].map { |c| "#{c[:account]}#{c[:sub_account].present? ? "/#{c[:sub_account]}" : ""} #{c[:amount].then { |v| delimited(v) }}円" }.join(", ")
     "- #{entry[:date]} | #{entry[:description]} | 借方: #{debits} | 貸方: #{credits}"
   end
 
@@ -214,6 +214,10 @@ class MonthlyReportGeneratorService
       system: SYSTEM_PROMPT,
       messages: [ { role: "user", content: prompt } ]
     )
+  end
+
+  def delimited(number)
+    ActiveSupport::NumberHelper.number_to_delimited(number)
   end
 
   def api_client
