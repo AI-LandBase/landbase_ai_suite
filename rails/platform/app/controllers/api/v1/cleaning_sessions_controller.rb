@@ -4,6 +4,7 @@ module Api
       ALLOWED_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
       MAX_IMAGE_SIZE = 10.megabytes
       MAX_IMAGE_COUNT = 5
+      MAX_ATTEMPTS_PER_STEP = 10
 
       before_action :require_feature!
       before_action :set_session, except: [ :create ]
@@ -49,6 +50,7 @@ module Api
 
         step = @session.current_step
         return render_error("判定するステップがありません") unless step
+        return render_error("このステップの判定回数上限（#{MAX_ATTEMPTS_PER_STEP}回）に達しました。スキップしてください。") if step.attempts_count >= MAX_ATTEMPTS_PER_STEP
 
         photos = Array.wrap(params[:photos]).select { |p| p.respond_to?(:tempfile) }
         return render_error("写真を1枚以上送信してください") if photos.empty?
@@ -68,7 +70,7 @@ module Api
 
         if result[:success]
           @session.reload
-          auto_complete_if_done
+          CleaningSessionService.auto_complete_if_done(@session)
 
           render json: {
             result: result[:result],
@@ -92,7 +94,7 @@ module Api
         return render_error("スキップするステップがありません") unless step
 
         @session.reload
-        auto_complete_if_done
+        CleaningSessionService.auto_complete_if_done(@session)
 
         response = {
           skipped_step: { task: step.task, area_name: step.area_name },
@@ -103,7 +105,7 @@ module Api
         }
 
         if @session.suspended?
-          response[:error] = "すべてのステップがスキップされました。清掃を最初からやり直してください。"
+          response[:warning] = "すべてのステップがスキップされました。清掃を最初からやり直してください。"
         end
 
         render json: response
@@ -156,16 +158,6 @@ module Api
         }
       end
 
-      def auto_complete_if_done
-        return unless @session.in_progress?
-        return if @session.current_step
-
-        if @session.step_counts.fetch("passed", 0).zero?
-          CleaningSessionService.suspend(@session)
-        else
-          CleaningSessionService.complete(@session)
-        end
-      end
     end
   end
 end

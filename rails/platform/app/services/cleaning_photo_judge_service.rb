@@ -67,8 +67,8 @@ class CleaningPhotoJudgeService
     Result.new(success: false, result: nil, feedback: nil, error: "Anthropic API エラー: #{e.message}")
   rescue JSON::ParserError => e
     Result.new(success: false, result: nil, feedback: nil, error: "JSON パースエラー: #{e.message}")
-  rescue StandardError => e
-    Result.new(success: false, result: nil, feedback: nil, error: "予期しないエラー: #{e.message}")
+  rescue IOError, Vips::Error => e
+    Result.new(success: false, result: nil, feedback: nil, error: "画像処理エラー: #{e.message}")
   end
 
   private

@@ -183,6 +183,33 @@ RSpec.describe CleaningSessionService do
     end
   end
 
+  describe ".auto_complete_if_done" do
+    it "全ステップ完了時にセッションを completed にすること" do
+      session = described_class.start(cleaning_manual: manual, staff_name: "田中", client: client)
+      session.cleaning_session_steps.update_all(status: "passed")
+      session.reload
+
+      described_class.auto_complete_if_done(session)
+      expect(session.reload.status).to eq("completed")
+    end
+
+    it "全ステップ skipped 時にセッションを suspended にすること" do
+      session = described_class.start(cleaning_manual: manual, staff_name: "田中", client: client)
+      session.cleaning_session_steps.update_all(status: "skipped")
+      session.reload
+
+      described_class.auto_complete_if_done(session)
+      expect(session.reload.status).to eq("suspended")
+    end
+
+    it "未完了ステップがある場合は何もしないこと" do
+      session = described_class.start(cleaning_manual: manual, staff_name: "田中", client: client)
+
+      described_class.auto_complete_if_done(session)
+      expect(session.reload.status).to eq("in_progress")
+    end
+  end
+
   describe ".build_report" do
     it "レポートデータを返すこと" do
       session = create(:cleaning_session, cleaning_manual: manual, client: client, started_at: 1.hour.ago, completed_at: Time.current, status: "completed")

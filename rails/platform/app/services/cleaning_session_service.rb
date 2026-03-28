@@ -134,6 +134,17 @@ class CleaningSessionService
       session.update!(status: "completed", completed_at: Time.current)
     end
 
+    def auto_complete_if_done(session)
+      return unless session.in_progress?
+      return if session.current_step
+
+      if session.step_counts.fetch("passed", 0).zero?
+        suspend(session)
+      else
+        complete(session)
+      end
+    end
+
     def build_report(session)
       steps = session.cleaning_session_steps.includes(
         cleaning_session_attempts: { photos_attachments: :blob }

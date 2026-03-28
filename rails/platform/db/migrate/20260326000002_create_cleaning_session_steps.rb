@@ -7,6 +7,9 @@ class CreateCleaningSessionSteps < ActiveRecord::Migration[8.0]
       t.integer :step_index, null: false
       t.string :task, null: false
       t.string :status, null: false, default: "pending"
+      t.text :description
+      t.text :checkpoint
+      t.integer :estimated_minutes
       t.integer :attempts_count, null: false, default: 0
       t.datetime :passed_at
       t.timestamps

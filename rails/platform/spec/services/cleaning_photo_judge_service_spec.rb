@@ -67,7 +67,16 @@ RSpec.describe CleaningPhotoJudgeService do
 
       before do
         mock_messages = double("Messages")
-        allow(mock_messages).to receive(:create).and_raise(StandardError.new("API connection failed"))
+        allow(mock_messages).to receive(:create).and_raise(
+          Anthropic::Errors::APIError.new(
+            url: "https://api.anthropic.com/v1/messages",
+            status: 500,
+            headers: {},
+            body: { error: { message: "API connection failed" } },
+            request: double("Request"),
+            response: double("Response")
+          )
+        )
         mock_client_err = double("Anthropic::Client", messages: mock_messages)
         allow(Anthropic::Client).to receive(:new).and_return(mock_client_err)
       end
