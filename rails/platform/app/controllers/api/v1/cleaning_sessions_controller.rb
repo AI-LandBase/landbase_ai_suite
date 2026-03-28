@@ -4,7 +4,7 @@ module Api
       ALLOWED_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
       MAX_IMAGE_SIZE = 10.megabytes
       MAX_IMAGE_COUNT = 5
-      MAX_ATTEMPTS_PER_STEP = 10
+      MAX_ATTEMPTS_PER_STEP = CleaningSessionService::MAX_ATTEMPTS_PER_STEP
 
       before_action :require_feature!
       before_action :set_session, except: [ :create ]

@@ -1,4 +1,6 @@
 class CleaningSessionService
+  MAX_ATTEMPTS_PER_STEP = 10
+
   class << self
     def start(cleaning_manual:, staff_name:, client:)
       manual_data = cleaning_manual.manual_data.deep_symbolize_keys
@@ -54,12 +56,13 @@ class CleaningSessionService
     end
 
     def judge(session:, step:, photos:)
-      # 1. ロック取得 + 状態チェック（短いトランザクション）
+      # 1. ロック取得 + 状態チェック + 試行回数上限チェック（短いトランザクション）
       locked_step = ActiveRecord::Base.transaction do
         s = session.cleaning_session_steps.lock.find(step.id)
         s.status.in?(%w[pending failed]) ? s : nil
       end
       return { success: false, error: "このステップは既に処理済みです" } unless locked_step
+      return { success: false, error: "このステップの判定回数上限に達しました" } if locked_step.attempts_count >= MAX_ATTEMPTS_PER_STEP
 
       # 2. AI判定（トランザクション外 — ロック保持しない）
       judge_result = CleaningPhotoJudgeService.new(
@@ -177,7 +180,7 @@ class CleaningSessionService
 
       duration_minutes = if session.started_at && session.completed_at
                            ((session.completed_at - session.started_at) / 60.0).round(1)
-      end
+                         end
 
       {
         session_id: session.id,

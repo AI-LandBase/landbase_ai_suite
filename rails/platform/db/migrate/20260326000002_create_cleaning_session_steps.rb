@@ -19,5 +19,9 @@ class CreateCleaningSessionSteps < ActiveRecord::Migration[8.0]
               [:cleaning_session_id, :area_index, :step_index],
               unique: true,
               name: "idx_session_steps_unique"
+
+    add_index :cleaning_session_steps,
+              [:cleaning_session_id, :status],
+              name: "idx_session_steps_session_status"
   end
 end

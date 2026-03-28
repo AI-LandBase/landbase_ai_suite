@@ -5,7 +5,7 @@ class CleaningSession < ApplicationRecord
   belongs_to :client
   has_many :cleaning_session_steps, -> { ordered }, dependent: :destroy
 
-  validates :staff_name, presence: true
+  validates :staff_name, presence: true, length: { maximum: 100 }
   validates :status, presence: true, inclusion: { in: STATUSES }
   validates :started_at, presence: true
 
