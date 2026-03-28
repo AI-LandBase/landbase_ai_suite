@@ -75,10 +75,12 @@ class CleaningSessionService
 
       # 3. DB更新（短いトランザクション — ロック再取得 + 状態再検証 + 一括更新）
       attempt = nil
+      already_processed = false
       ActiveRecord::Base.transaction do
         locked_step = session.cleaning_session_steps.lock.find(locked_step.id)
         unless locked_step.status.in?(%w[pending failed])
-          return { success: false, error: "このステップは既に処理済みです" }
+          already_processed = true
+          raise ActiveRecord::Rollback
         end
 
         CleaningSessionStep.where(id: locked_step.id).update_all("attempts_count = attempts_count + 1")
@@ -97,6 +99,8 @@ class CleaningSessionService
           locked_step.update!(status: "failed")
         end
       end
+
+      return { success: false, error: "このステップは既に処理済みです" } if already_processed
 
       photos.each { |photo| attempt.photos.attach(photo) }
 
