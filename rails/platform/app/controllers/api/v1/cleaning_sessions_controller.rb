@@ -157,7 +157,6 @@ module Api
           completed_steps: session.completed_steps_count
         }
       end
-
     end
   end
 end

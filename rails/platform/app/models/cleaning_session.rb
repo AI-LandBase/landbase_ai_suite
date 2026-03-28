@@ -14,9 +14,9 @@ class CleaningSession < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
 
   def current_step
-    cleaning_session_steps.ordered
+    cleaning_session_steps
       .where(status: %w[failed pending])
-      .order(Arel.sql("CASE status WHEN 'failed' THEN 0 ELSE 1 END"))
+      .reorder(Arel.sql("CASE status WHEN 'failed' THEN 0 ELSE 1 END"), :area_index, :step_index)
       .first
   end
 
