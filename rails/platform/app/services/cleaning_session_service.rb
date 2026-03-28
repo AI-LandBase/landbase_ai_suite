@@ -156,9 +156,7 @@ class CleaningSessionService
     end
 
     def build_report(session)
-      steps = session.cleaning_session_steps.includes(
-        cleaning_session_attempts: { photos_attachments: :blob }
-      ).ordered
+      steps = session.cleaning_session_steps.includes(:cleaning_session_attempts).ordered
 
       area_results = steps.group_by(&:area_name).map do |area_name, area_steps|
         {

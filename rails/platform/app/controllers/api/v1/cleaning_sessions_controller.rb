@@ -50,7 +50,7 @@ module Api
 
         step = @session.current_step
         return render_error("判定するステップがありません") unless step
-        return render_error("このステップの判定回数上限（#{MAX_ATTEMPTS_PER_STEP}回）に達しました。スキップしてください。") if step.attempts_count >= MAX_ATTEMPTS_PER_STEP
+        return render_error("このステップの判定回数上限に達しました。スキップしてください。") if step.attempts_count >= MAX_ATTEMPTS_PER_STEP
 
         photos = Array.wrap(params[:photos]).select { |p| p.respond_to?(:tempfile) }
         return render_error("写真を1枚以上送信してください") if photos.empty?

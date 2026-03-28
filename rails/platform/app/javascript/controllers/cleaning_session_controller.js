@@ -32,6 +32,10 @@ export default class extends Controller {
       const session = await sessionRes.json()
 
       if (session.status === "suspended") {
+        if (!confirm("中断中のセッションがあります。再開しますか？")) {
+          window.location.href = `/cleaning_manuals?client_code=${encodeURIComponent(this.clientCodeValue)}`
+          return
+        }
         const resumeRes = await this.apiFetch(
           `/api/v1/cleaning_sessions/${this.sessionIdValue}/resume`,
           { method: "PATCH" }
@@ -173,7 +177,6 @@ export default class extends Controller {
         }
       )
 
-      clearTimeout(timeoutId)
       const data = await response.json()
 
       if (!response.ok) {
@@ -194,7 +197,6 @@ export default class extends Controller {
         setTimeout(() => this.resetPhotoState(), 2000)
       }
     } catch (error) {
-      clearTimeout(timeoutId)
       if (error.name === "AbortError") {
         this.showError("判定がタイムアウトしました。再試行してください。")
       } else {
@@ -202,6 +204,7 @@ export default class extends Controller {
       }
       this.showRetryButton()
     } finally {
+      clearTimeout(timeoutId)
       this.hideLoading()
       this.setButtonsEnabled(true)
       this.abortController = null

@@ -5,6 +5,9 @@ FactoryBot.define do
     area_index { 0 }
     step_index { 0 }
     task { "ベッドメイキング" }
+    description { "シーツを交換し、枕を配置する" }
+    checkpoint { "シーツにしわがないこと" }
+    estimated_minutes { 5 }
     status { "pending" }
     attempts_count { 0 }
 
