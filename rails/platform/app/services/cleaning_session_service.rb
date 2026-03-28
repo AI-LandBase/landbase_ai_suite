@@ -116,24 +116,27 @@ class CleaningSessionService
     end
 
     def skip_step(session)
-      step = ActiveRecord::Base.transaction do
+      ActiveRecord::Base.transaction do
         s = session.current_step
-        return nil unless s
+        next nil unless s
 
         locked = session.cleaning_session_steps.lock.find(s.id)
-        return nil unless locked.status.in?(%w[pending failed])
+        next nil unless locked.status.in?(%w[pending failed])
 
         locked.update!(status: "skipped")
         locked
       end
-      step
     end
 
     def suspend(session)
+      raise ArgumentError, "in_progress のセッションのみ中断できます" unless session.in_progress?
+
       session.update!(status: "suspended")
     end
 
     def resume(session)
+      raise ArgumentError, "suspended のセッションのみ再開できます" unless session.suspended?
+
       session.update!(status: "in_progress")
     end
 
