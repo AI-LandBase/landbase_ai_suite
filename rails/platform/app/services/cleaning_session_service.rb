@@ -89,8 +89,9 @@ class CleaningSessionService
         CleaningSessionStep.where(id: locked_step.id).update_all("attempts_count = attempts_count + 1")
         locked_step.reload
 
+        next_attempt_number = locked_step.cleaning_session_attempts.maximum(:attempt_number).to_i + 1
         attempt = locked_step.cleaning_session_attempts.create!(
-          attempt_number: locked_step.attempts_count,
+          attempt_number: next_attempt_number,
           result: judge_result.result,
           ai_feedback: judge_result.feedback,
           judged_at: Time.current

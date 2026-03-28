@@ -5,6 +5,8 @@ class CleaningSession < ApplicationRecord
   belongs_to :client
   has_many :cleaning_session_steps, -> { ordered }, dependent: :destroy
 
+  before_validation :strip_staff_name
+
   validates :staff_name, presence: true, length: { maximum: 100 }
   validates :status, presence: true, inclusion: { in: STATUSES }
   validates :started_at, presence: true
@@ -47,5 +49,11 @@ class CleaningSession < ApplicationRecord
 
   def suspended?
     status == "suspended"
+  end
+
+  private
+
+  def strip_staff_name
+    self.staff_name = staff_name&.strip
   end
 end

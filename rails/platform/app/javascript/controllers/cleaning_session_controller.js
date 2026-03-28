@@ -158,21 +158,17 @@ export default class extends Controller {
     this.setButtonsEnabled(false)
 
     const formData = new FormData()
-    formData.append("client_code", this.clientCodeValue)
     this.files.forEach(file => formData.append("photos[]", file))
 
     this.abortController = new AbortController()
     const timeoutId = setTimeout(() => this.abortController.abort(), 60000)
 
     try {
-      const response = await fetch(
-        `/api/v1/cleaning_sessions/${this.sessionIdValue}/judge?client_code=${encodeURIComponent(this.clientCodeValue)}`,
+      const response = await this.apiFetch(
+        `/api/v1/cleaning_sessions/${this.sessionIdValue}/judge`,
         {
           method: "POST",
           body: formData,
-          headers: {
-            "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content
-          },
           signal: this.abortController.signal
         }
       )

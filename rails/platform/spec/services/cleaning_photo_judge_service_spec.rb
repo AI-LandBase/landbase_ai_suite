@@ -32,6 +32,21 @@ RSpec.describe CleaningPhotoJudgeService do
   end
 
   describe "#call" do
+    context "ANTHROPIC_API_KEY が未設定の場合" do
+      let(:mock_response) { nil }
+
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("ANTHROPIC_API_KEY").and_return(nil)
+      end
+
+      it "エラーを返すこと" do
+        result = service.call
+        expect(result.success?).to be false
+        expect(result.error).to include("ANTHROPIC_API_KEY")
+      end
+    end
+
     context "API が OK を返す場合" do
       let(:mock_response) do
         double("Response",
