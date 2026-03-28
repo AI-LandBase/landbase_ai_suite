@@ -164,6 +164,20 @@ RSpec.describe CleaningSessionService do
       end
     end
 
+    context "試行回数上限に達している場合" do
+      let(:judge_response_json) { '{"result":"ok","feedback":"良好"}' }
+
+      it "エラーを返しAI判定を実行しないこと" do
+        step.update!(attempts_count: CleaningSessionService::MAX_ATTEMPTS_PER_STEP)
+
+        result = described_class.judge(session: session, step: step, photos: [photo])
+
+        expect(result[:success]).to be false
+        expect(result[:error]).to include("上限")
+        expect(step.reload.attempts_count).to eq(CleaningSessionService::MAX_ATTEMPTS_PER_STEP)
+      end
+    end
+
     context "AI判定サービスがエラーの場合" do
       let(:judge_response_json) { "" }
 

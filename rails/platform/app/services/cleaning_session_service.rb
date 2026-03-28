@@ -101,11 +101,11 @@ class CleaningSessionService
         else
           locked_step.update!(status: "failed")
         end
+
+        photos.each { |photo| attempt.photos.attach(photo) }
       end
 
       return { success: false, error: "このステップは既に処理済みです" } if already_processed
-
-      photos.each { |photo| attempt.photos.attach(photo) }
 
       {
         success: true,

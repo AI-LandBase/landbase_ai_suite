@@ -17,7 +17,6 @@ export default class extends Controller {
     this.files = []
     this.objectURLs = []
     this.abortController = null
-    this.lastFormData = null
     this.loadCurrentStep()
   }
 
@@ -157,7 +156,6 @@ export default class extends Controller {
     const formData = new FormData()
     formData.append("client_code", this.clientCodeValue)
     this.files.forEach(file => formData.append("photos[]", file))
-    this.lastFormData = formData
 
     this.abortController = new AbortController()
     const timeoutId = setTimeout(() => this.abortController.abort(), 60000)
@@ -192,6 +190,8 @@ export default class extends Controller {
         setTimeout(() => this.showCompleted(), 2000)
       } else if (data.result === "ok" && data.next_step) {
         setTimeout(() => this.updateStepDisplay(data.next_step), 2000)
+      } else if (data.result === "ng") {
+        setTimeout(() => this.resetPhotoState(), 2000)
       }
     } catch (error) {
       clearTimeout(timeoutId)
