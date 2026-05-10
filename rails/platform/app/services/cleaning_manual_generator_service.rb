@@ -189,16 +189,15 @@ class CleaningManualGeneratorService
     result = processor.resize_to_limit(MAX_IMAGE_LONG_EDGE, MAX_IMAGE_LONG_EDGE).convert("jpeg").saver(quality: 80).call
     { data: File.binread(result.path), media_type: "image/jpeg" }
   ensure
-    if result.respond_to?(:close)
-      result.close
-      result.unlink if result.respond_to?(:unlink)
-    end
+    result.close! if result.respond_to?(:close!)
     image.rewind
   end
 
   def extract_json(text)
-    if text =~ /```(?:json)?\s*\n?(.*?)\n?```/m
+    if text =~ /```(?:json)?\s*\n(.*?)\n\s*```/m
       $1.strip
+    elsif text =~ /\{.*\}/m
+      text[/\{.*\}/m].strip
     else
       text.strip
     end
