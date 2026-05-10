@@ -1,0 +1,106 @@
+<% content_for(:title) { "清掃レポート - #{@manual.property_name}" } %>
+
+<% content_for(:breadcrumb) do %>
+  <%= render "shared/breadcrumb", items: [
+    { label: "清掃マニュアル一覧", path: cleaning_manuals_path(client_code: @client_code) },
+    { label: @manual.property_name, path: cleaning_manual_path(@manual, client_code: @client_code) },
+    { label: "清掃レポート" }
+  ] %>
+<% end %>
+
+<div class="w-full max-w-2xl mx-auto">
+  <h1 class="text-2xl font-bold mb-2">清掃レポート</h1>
+  <p class="text-gray-400 mb-6"><%= @manual.property_name %> - <%= @manual.room_type %></p>
+
+  <!-- サマリー -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <%= render "shared/card", padding: "p-4" do %>
+      <div class="text-center">
+        <p class="text-2xl font-bold text-teal-400"><%= @report[:staff_name] %></p>
+        <p class="text-sm text-gray-400">担当者</p>
+      </div>
+    <% end %>
+    <%= render "shared/card", padding: "p-4" do %>
+      <div class="text-center">
+        <p class="text-2xl font-bold text-teal-400"><%= @report[:duration_minutes] || "-" %></p>
+        <p class="text-sm text-gray-400">所要時間(分)</p>
+      </div>
+    <% end %>
+    <%= render "shared/card", padding: "p-4" do %>
+      <div class="text-center">
+        <p class="text-2xl font-bold text-green-400"><%= @report[:passed_steps] %></p>
+        <p class="text-sm text-gray-400">合格</p>
+      </div>
+    <% end %>
+    <%= render "shared/card", padding: "p-4" do %>
+      <div class="text-center">
+        <p class="text-2xl font-bold text-yellow-400"><%= @report[:skipped_steps] %></p>
+        <p class="text-sm text-gray-400">スキップ</p>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- 試行回数サマリー -->
+  <%= render "shared/card", class: "mb-6" do %>
+    <div class="flex items-center justify-between">
+      <span class="text-gray-400">総試行回数</span>
+      <span class="font-medium"><%= @report[:total_attempts] %>回</span>
+    </div>
+    <div class="flex items-center justify-between mt-2">
+      <span class="text-gray-400">開始時刻</span>
+      <span class="font-medium"><%= @report[:started_at]&.strftime("%Y-%m-%d %H:%M") %></span>
+    </div>
+    <% if @report[:completed_at] %>
+      <div class="flex items-center justify-between mt-2">
+        <span class="text-gray-400">完了時刻</span>
+        <span class="font-medium"><%= @report[:completed_at]&.strftime("%Y-%m-%d %H:%M") %></span>
+      </div>
+    <% end %>
+  <% end %>
+
+  <!-- エリア別結果 -->
+  <% @report[:area_results]&.each do |area| %>
+    <div class="bg-gray-900 shadow rounded-lg overflow-hidden mb-4">
+      <div class="bg-gray-800 px-4 py-3 border-b border-gray-700">
+        <h2 class="font-semibold"><%= area[:area_name] %></h2>
+      </div>
+      <div class="p-4 space-y-3">
+        <% area[:steps]&.each do |step| %>
+          <div class="flex items-start gap-3 py-2 border-b border-gray-800 last:border-0">
+            <% case step[:status] %>
+            <% when "passed" %>
+              <span class="flex-shrink-0 w-6 h-6 bg-green-900 text-green-400 rounded-full flex items-center justify-center text-xs">&#10003;</span>
+            <% when "skipped" %>
+              <span class="flex-shrink-0 w-6 h-6 bg-yellow-900 text-yellow-400 rounded-full flex items-center justify-center text-xs">-</span>
+            <% when "failed" %>
+              <span class="flex-shrink-0 w-6 h-6 bg-red-900 text-red-400 rounded-full flex items-center justify-center text-xs">&#10007;</span>
+            <% else %>
+              <span class="flex-shrink-0 w-6 h-6 bg-gray-700 text-gray-400 rounded-full flex items-center justify-center text-xs">?</span>
+            <% end %>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium"><%= step[:task] %></p>
+              <% if step[:attempts_count] > 0 %>
+                <p class="text-xs text-gray-500 mt-1">試行回数: <%= step[:attempts_count] %>回</p>
+              <% end %>
+              <% step[:attempts]&.each do |attempt| %>
+                <div class="mt-2 text-xs p-2 rounded bg-gray-800">
+                  <span class="<%= attempt[:result] == 'ok' ? 'text-green-400' : 'text-red-400' %>">
+                    <%= attempt[:result] == 'ok' ? 'OK' : 'NG' %>
+                  </span>
+                  <span class="text-gray-500 ml-2"><%= attempt[:feedback] %></span>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- 戻るリンク -->
+  <div class="text-center mt-6">
+    <%= link_to "マニュアルに戻る",
+        cleaning_manual_path(@manual, client_code: @client_code),
+        class: "text-teal-400 hover:text-teal-300 text-sm transition" %>
+  </div>
+</div>

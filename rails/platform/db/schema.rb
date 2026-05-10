@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_23_040806) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_26_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -82,6 +82,51 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_040806) do
     t.index ["client_id", "property_name"], name: "index_cleaning_manuals_on_client_id_and_property_name"
     t.index ["client_id"], name: "index_cleaning_manuals_on_client_id"
     t.index ["status"], name: "index_cleaning_manuals_on_status"
+  end
+
+  create_table "cleaning_session_attempts", force: :cascade do |t|
+    t.bigint "cleaning_session_step_id", null: false
+    t.integer "attempt_number", null: false
+    t.string "result", null: false
+    t.text "ai_feedback"
+    t.datetime "judged_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cleaning_session_step_id", "attempt_number"], name: "idx_session_attempts_unique", unique: true
+    t.index ["cleaning_session_step_id"], name: "index_cleaning_session_attempts_on_cleaning_session_step_id"
+  end
+
+  create_table "cleaning_session_steps", force: :cascade do |t|
+    t.bigint "cleaning_session_id", null: false
+    t.string "area_name", null: false
+    t.integer "area_index", null: false
+    t.integer "step_index", null: false
+    t.string "task", null: false
+    t.string "status", default: "pending", null: false
+    t.integer "attempts_count", default: 0, null: false
+    t.datetime "passed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "description"
+    t.text "checkpoint"
+    t.integer "estimated_minutes"
+    t.index ["cleaning_session_id", "area_index", "step_index"], name: "idx_session_steps_unique", unique: true
+    t.index ["cleaning_session_id"], name: "index_cleaning_session_steps_on_cleaning_session_id"
+  end
+
+  create_table "cleaning_sessions", force: :cascade do |t|
+    t.bigint "cleaning_manual_id", null: false
+    t.bigint "client_id", null: false
+    t.string "staff_name", null: false
+    t.string "status", default: "in_progress", null: false
+    t.datetime "started_at", null: false
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cleaning_manual_id", "status"], name: "index_cleaning_sessions_on_cleaning_manual_id_and_status"
+    t.index ["cleaning_manual_id"], name: "index_cleaning_sessions_on_cleaning_manual_id"
+    t.index ["client_id", "status"], name: "index_cleaning_sessions_on_client_id_and_status"
+    t.index ["client_id"], name: "index_cleaning_sessions_on_client_id"
   end
 
   create_table "clients", force: :cascade do |t|
@@ -167,6 +212,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_040806) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "cleaning_manuals", "clients"
+  add_foreign_key "cleaning_session_attempts", "cleaning_session_steps"
+  add_foreign_key "cleaning_session_steps", "cleaning_sessions"
+  add_foreign_key "cleaning_sessions", "cleaning_manuals"
+  add_foreign_key "cleaning_sessions", "clients"
   add_foreign_key "journal_entries", "clients"
   add_foreign_key "journal_entries", "statement_batches"
   add_foreign_key "journal_entry_lines", "journal_entries"
