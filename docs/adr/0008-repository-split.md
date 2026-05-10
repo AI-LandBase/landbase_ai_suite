@@ -2,7 +2,7 @@
 
 ## ステータス
 
-提案（Proposed）
+採用（Accepted）
 
 ## 日付
 
