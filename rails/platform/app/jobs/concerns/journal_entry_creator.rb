@@ -13,7 +13,7 @@ module JournalEntryCreator
   private
 
   def create_journal_entries(batch, data)
-    source_period = build_source_period(data[:receipt_date])
+    source_period = resolve_source_period(batch, data)
     transactions = data[:transactions] || []
 
     if batch.source_type == "receipt"
@@ -33,9 +33,9 @@ module JournalEntryCreator
         transaction_no: base_txn_no + idx + 1,
         date: txn[:date],
         description: txn[:description] || "",
-        tag: txn[:tag] || "receipt",
+        tag: txn[:tag] || batch.source_type,
         memo: txn[:memo] || "",
-        cardholder: "",
+        cardholder: txn[:cardholder] || "",
         status: txn[:status] || "ok",
         journal_entry_lines_attributes: [
           {
@@ -60,6 +60,17 @@ module JournalEntryCreator
           }
         ]
       )
+    end
+  end
+
+  def resolve_source_period(batch, data)
+    case batch.source_type
+    when "receipt"
+      build_source_period(data[:receipt_date])
+    when "invoice"
+      build_source_period(data[:invoice_date])
+    else
+      data[:statement_period]
     end
   end
 
