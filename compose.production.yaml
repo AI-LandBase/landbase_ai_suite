@@ -55,6 +55,7 @@ services:
         condition: service_healthy
     networks:
       - internal
+      - web-proxy-net
     restart: unless-stopped
 
 networks:
