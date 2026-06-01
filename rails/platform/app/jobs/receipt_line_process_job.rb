@@ -107,15 +107,22 @@ class ReceiptLineProcessJob < ApplicationJob
   end
 
   def format_success_message(data)
-    txn = data[:transactions]&.first
-    return "領収書を処理しました。" unless txn
+    txns = data[:transactions] || []
+    first_txn = txns.first
+    return "領収書を処理しました。" unless first_txn
+
+    total = data.dig(:summary, :total_amount) || txns.sum { |t| t[:debit_amount].to_i }
 
     lines = ["📝 領収書を処理しました", ""]
-    lines << "📅 日付: #{txn[:date]}"
-    lines << "🏪 支払先: #{txn[:debit_partner]}" if txn[:debit_partner].present?
-    lines << "💰 金額: ¥#{txn[:debit_amount]&.to_s(:delimited) rescue txn[:debit_amount]}"
-    lines << "📂 勘定科目: #{txn[:debit_account]}"
-    lines << "🔍 判定元: #{txn[:status] == "review_required" ? "AI推論（要確認）" : "AIマッチング"}"
+    lines << "📅 日付: #{first_txn[:date]}"
+    lines << "🏪 支払先: #{first_txn[:debit_partner]}" if first_txn[:debit_partner].present?
+    lines << "💰 合計金額: ¥#{ActiveSupport::NumberHelper.number_to_delimited(total)}"
+    if txns.size > 1
+      lines << "📂 内訳: #{txns.size}件の仕訳"
+    else
+      lines << "📂 勘定科目: #{first_txn[:debit_account]}"
+    end
+    lines << "🔍 判定元: #{first_txn[:status] == "review_required" ? "AI推論（要確認）" : "AIマッチング"}"
     lines.join("\n")
   end
 
