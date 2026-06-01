@@ -511,6 +511,11 @@ RSpec.describe InvoiceProcessorService do
         expect(result.retryable?).to be false
       end
 
+      it "file_not_foundはretryableでないこと" do
+        result = described_class::Result.new(success: false, data: {}, error: "error", reason: :file_not_found)
+        expect(result.retryable?).to be false
+      end
+
       it "成功時はretryableでないこと" do
         result = described_class::Result.new(success: true, data: {}, error: nil, reason: nil)
         expect(result.retryable?).to be false
