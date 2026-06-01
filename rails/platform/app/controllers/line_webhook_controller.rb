@@ -95,7 +95,7 @@ class LineWebhookController < ApplicationController
 
     LineMessagingService.reply(
       event["replyToken"],
-      "#{client.name}さん、友だち追加ありがとうございます！\n領収書・レシートの画像を送信すると、自動で仕訳データを作成します。"
+      "友だち追加ありがとうございます！\n#{client.name}のレシート受付に登録しました。\n領収書・レシートの画像を送信すると、自動で仕訳データを作成します。"
     )
   end
 
