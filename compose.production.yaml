@@ -30,6 +30,8 @@ services:
       - .env.local
     expose:
       - "3000"
+    volumes:
+      - ./storage:/platform/storage
     depends_on:
       db-suite:
         condition: service_healthy
@@ -50,6 +52,8 @@ services:
     env_file:
       - .env.production
       - .env.local
+    volumes:
+      - ./storage:/platform/storage
     depends_on:
       platform:
         condition: service_healthy

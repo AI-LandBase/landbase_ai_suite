@@ -1,8 +1,11 @@
 require "image_processing/vips"
 
 class CleaningManualGeneratorService
-  Result = Data.define(:success, :data, :error) do
+  NON_RETRYABLE_REASONS = %i[config_error file_not_found].freeze
+
+  Result = Data.define(:success, :data, :error, :reason) do
     alias_method :success?, :success
+    def retryable? = !success && !NON_RETRYABLE_REASONS.include?(reason)
   end
 
   MAX_IMAGES_PER_BATCH = 20
@@ -70,7 +73,7 @@ class CleaningManualGeneratorService
 
   def call
     unless ENV["ANTHROPIC_API_KEY"].present?
-      return Result.new(success: false, data: {}, error: "ANTHROPIC_API_KEY が設定されていません")
+      return Result.new(success: false, data: {}, error: "ANTHROPIC_API_KEY が設定されていません", reason: :config_error)
     end
 
     batches = @images.each_slice(MAX_IMAGES_PER_BATCH).to_a
@@ -78,18 +81,20 @@ class CleaningManualGeneratorService
     if batches.size == 1
       result = generate_for_batch(batches.first)
       return result unless result.success?
-      Result.new(success: true, data: result.data, error: nil)
+      Result.new(success: true, data: result.data, error: nil, reason: nil)
     else
       merged = merge_batch_results(batches)
       return merged unless merged.success?
-      Result.new(success: true, data: merged.data, error: nil)
+      Result.new(success: true, data: merged.data, error: nil, reason: nil)
     end
+  rescue ActiveStorage::FileNotFoundError => e
+    Result.new(success: false, data: {}, error: "画像ファイルが見つかりません: #{e.message}", reason: :file_not_found)
   rescue Anthropic::Errors::APIError => e
-    Result.new(success: false, data: {}, error: "Anthropic API エラー: #{e.message}")
+    Result.new(success: false, data: {}, error: "Anthropic API エラー: #{e.message}", reason: :api_error)
   rescue JSON::ParserError => e
-    Result.new(success: false, data: {}, error: "JSON パースエラー: #{e.message}")
+    Result.new(success: false, data: {}, error: "JSON パースエラー: #{e.message}", reason: :parse_error)
   rescue StandardError => e
-    Result.new(success: false, data: {}, error: "予期しないエラー: #{e.message}")
+    Result.new(success: false, data: {}, error: "予期しないエラー: #{e.message}", reason: :unexpected_error)
   end
 
   private
@@ -114,7 +119,7 @@ class CleaningManualGeneratorService
     data[:room_type] = @room_type
     data[:generated_at] = Time.current.iso8601
 
-    Result.new(success: true, data: data, error: nil)
+    Result.new(success: true, data: data, error: nil, reason: nil)
   end
 
   def merge_batch_results(batches)
@@ -152,7 +157,7 @@ class CleaningManualGeneratorService
       total_estimated_minutes: total_minutes
     }
 
-    Result.new(success: true, data: data, error: nil)
+    Result.new(success: true, data: data, error: nil, reason: nil)
   end
 
   def build_content(image_batch)

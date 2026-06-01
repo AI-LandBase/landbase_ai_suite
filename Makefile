@@ -132,13 +132,24 @@ ngrok-status: ## ngrokの状態確認
 # ================================
 
 .PHONY: prod-deploy
-prod-deploy: ## 本番: Platformデプロイ（build → up → db:prepare）
+prod-deploy: prod-storage-check ## 本番: Platformデプロイ（build → up → db:prepare）
 	@echo "${GREEN}Deploying Platform...${NC}"
 	docker compose -f compose.production.yaml --env-file .env.production build --no-cache
 	docker compose -f compose.production.yaml --env-file .env.production down
 	docker compose -f compose.production.yaml --env-file .env.production up -d
 	docker compose -f compose.production.yaml --env-file .env.production exec platform rails db:prepare
 	@echo "${GREEN}Platform deployed successfully.${NC}"
+
+.PHONY: prod-storage-check
+prod-storage-check: ## 本番: ActiveStorage bind mount 用 ./storage ディレクトリの所有権チェック
+	@mkdir -p storage
+	@OWNER=$$(stat -c '%u:%g' storage 2>/dev/null || stat -f '%u:%g' storage); \
+	if [ "$$OWNER" != "999:999" ]; then \
+		echo "${RED}ERROR: ./storage must be owned by 999:999 (rails user inside container), but is $$OWNER${NC}"; \
+		echo "${RED}Run: sudo chown -R 999:999 storage${NC}"; \
+		exit 1; \
+	fi
+	@echo "${GREEN}storage directory ownership OK (999:999)${NC}"
 
 .PHONY: prod-logs
 prod-logs: ## 本番: ログ表示

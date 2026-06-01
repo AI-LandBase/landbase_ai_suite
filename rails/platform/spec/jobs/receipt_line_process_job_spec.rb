@@ -208,6 +208,62 @@ RSpec.describe ReceiptLineProcessJob, type: :job do
       end
     end
 
+    context "過去にfailedになった同一画像" do
+      let(:mock_service) { instance_double(ReceiptProcessorService, call: receipt_result) }
+
+      before do
+        create(:statement_batch, :failed, client: client, source_type: "receipt", pdf_fingerprint: fingerprint)
+        allow(ReceiptProcessorService).to receive(:new).and_return(mock_service)
+      end
+
+      it "重複扱いせず新規バッチを作成して処理すること" do
+        expect {
+          described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+        }.to change(StatementBatch, :count).by(1)
+      end
+
+      it "重複メッセージを送信しないこと" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).not_to have_received(:push).with(
+          line_user_id,
+          "この画像は既に処理済みです。"
+        )
+      end
+    end
+
+    context "file_not_found エラー" do
+      let(:file_not_found_result) do
+        ReceiptProcessorService::Result.new(
+          success: false, data: {}, error: "画像ファイルが見つかりません: ActiveStorage::FileNotFoundError", reason: :file_not_found
+        )
+      end
+
+      before do
+        allow(ReceiptProcessorService).to receive(:new).and_return(
+          instance_double(ReceiptProcessorService, call: file_not_found_result)
+        )
+      end
+
+      it "専用エラーメッセージをLINEで送信すること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          "画像ファイルの読み込みに失敗しました。もう一度送信してください。"
+        )
+      end
+
+      it "リトライせずStatementBatchをfailedにすること" do
+        expect {
+          described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+        }.not_to raise_error
+
+        batch = StatementBatch.last
+        expect(batch.status).to eq("failed")
+      end
+    end
+
     context "非領収書画像" do
       let(:non_receipt_result) do
         ReceiptProcessorService::Result.new(

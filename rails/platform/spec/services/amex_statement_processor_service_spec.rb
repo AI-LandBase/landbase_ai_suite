@@ -492,6 +492,30 @@ RSpec.describe AmexStatementProcessorService do
         result = described_class::Result.new(success: false, data: {}, error: "error", reason: :config_error)
         expect(result.retryable?).to be false
       end
+
+      it "file_not_foundはretryableでないこと" do
+        result = described_class::Result.new(success: false, data: {}, error: "error", reason: :file_not_found)
+        expect(result.retryable?).to be false
+      end
+    end
+
+    context "ActiveStorage::FileNotFoundError が発生した場合" do
+      it "file_not_found reasonで失敗し、retryableでないこと" do
+        broken_pdf = double("BrokenAttachment")
+        allow(broken_pdf).to receive(:respond_to?).with(:download).and_return(true)
+        allow(broken_pdf).to receive(:respond_to?).with(:read).and_return(false)
+        allow(broken_pdf).to receive(:download).and_raise(
+          ActiveStorage::FileNotFoundError, "missing file"
+        )
+
+        service = described_class.new(pdf: broken_pdf, client_code: client.code)
+        result = service.call
+
+        expect(result.success?).to be false
+        expect(result.reason).to eq(:file_not_found)
+        expect(result.error).to include("PDFファイルが見つかりません")
+        expect(result.retryable?).to be false
+      end
     end
   end
 end
