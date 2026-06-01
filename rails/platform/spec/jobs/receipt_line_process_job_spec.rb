@@ -99,6 +99,77 @@ RSpec.describe ReceiptLineProcessJob, type: :job do
           a_string_including("領収書を処理しました")
         )
       end
+
+      it "合計金額がデリミタ付きで表示されること（単一取引）" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          a_string_including("合計金額: ¥1,080")
+        )
+      end
+    end
+
+    context "正常系（複数取引のレシート）" do
+      let(:success_data_multi) do
+        {
+          is_receipt: true,
+          receipt_date: "2026-03-13",
+          transactions: [
+            {
+              transaction_no: 1,
+              date: "2026-03-13",
+              debit_account: "仕入高",
+              debit_partner: "綿半",
+              debit_invoice: "T1111111111111",
+              debit_amount: 4597,
+              credit_account: "現金",
+              credit_amount: 4597,
+              description: "食品",
+              status: "ok"
+            },
+            {
+              transaction_no: 2,
+              date: "2026-03-13",
+              debit_account: "消耗品費",
+              debit_partner: "綿半",
+              debit_invoice: "T1111111111111",
+              debit_amount: 1795,
+              credit_account: "現金",
+              credit_amount: 1795,
+              description: "日用品",
+              status: "ok"
+            }
+          ],
+          summary: { total_amount: 6392 }
+        }
+      end
+      let(:multi_result) do
+        ReceiptProcessorService::Result.new(success: true, data: success_data_multi, error: nil, reason: nil)
+      end
+      let(:mock_service) { instance_double(ReceiptProcessorService, call: multi_result) }
+
+      before do
+        allow(ReceiptProcessorService).to receive(:new).and_return(mock_service)
+      end
+
+      it "summary.total_amountをデリミタ付きで表示すること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          a_string_including("合計金額: ¥6,392")
+        )
+      end
+
+      it "件数で内訳を示すこと" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          a_string_including("内訳: 2件の仕訳")
+        )
+      end
     end
 
     context "画像取得失敗" do
