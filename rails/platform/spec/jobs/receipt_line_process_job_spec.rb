@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe ReceiptLineProcessJob, type: :job do
-  let(:client) { create(:client, line_user_id: "U1234567890abcdef") }
-  let(:line_user_id) { client.line_user_id }
+  let(:client) { create(:client) }
+  let(:line_user_id) { "U1234567890abcdef" }
   let(:message_id) { "msg_001" }
   let(:image_binary) { "\xFF\xD8\xFF\xE0test_image_data".b }
   let(:fingerprint) { Digest::SHA256.hexdigest(image_binary) }

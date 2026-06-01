@@ -18,8 +18,10 @@ FactoryBot.define do
       status { "trial" }
     end
 
-    trait :with_line do
-      sequence(:line_user_id) { |n| "U#{n.to_s.rjust(32, '0')}" }
+    trait :with_line_follower do
+      after(:create) do |client|
+        create(:line_follower, client: client)
+      end
     end
   end
 end
