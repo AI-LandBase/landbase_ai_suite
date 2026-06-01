@@ -167,6 +167,45 @@ RSpec.describe ReceiptLineProcessJob, type: :job do
       end
     end
 
+    context "重複レシート（インボイス一致）" do
+      let(:mock_service) { instance_double(ReceiptProcessorService, call: receipt_result) }
+
+      before do
+        allow(ReceiptProcessorService).to receive(:new).and_return(mock_service)
+        create(:journal_entry, :receipt,
+          client: client,
+          source_period: "2026年3月",
+          transaction_no: 1,
+          date: "2026-03-13",
+          debit_invoice: "T1234567890123",
+          debit_partner: "別店舗",
+          debit_amount: 1080
+        )
+      end
+
+      it "新規JournalEntryを作成しないこと" do
+        expect {
+          described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+        }.not_to change(JournalEntry, :count)
+      end
+
+      it "StatementBatchをduplicateにすること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        batch = StatementBatch.last
+        expect(batch.status).to eq("duplicate")
+      end
+
+      it "重複通知をLINEで送信すること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          a_string_including("このレシートは処理済みです")
+        )
+      end
+    end
+
     context "リトライ可能なAPIエラー" do
       let(:error_result) do
         ReceiptProcessorService::Result.new(

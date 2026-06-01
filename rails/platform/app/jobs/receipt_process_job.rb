@@ -32,6 +32,8 @@ class ReceiptProcessJob < ApplicationJob
             error_message: nil
           )
         end
+      rescue DuplicateFound => e
+        batch.update!(status: "duplicate", error_message: "重複検知: 既存 JE id=#{e.existing_entry.id}")
       rescue ActiveRecord::RecordInvalid => e
         batch.update(status: "failed", error_message: "仕訳データの保存に失敗: #{e.message}")
       end

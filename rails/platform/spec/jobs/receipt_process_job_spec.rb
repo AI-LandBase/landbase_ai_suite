@@ -226,6 +226,86 @@ RSpec.describe ReceiptProcessJob, type: :job do
     end
   end
 
+  context "重複レシート（インボイス番号一致）の場合" do
+    before do
+      create(:journal_entry, :receipt,
+        client: client,
+        source_period: "2026年3月",
+        transaction_no: 1,
+        date: "2026-03-01",
+        debit_invoice: "T9876543210123",
+        debit_partner: "別店舗",
+        debit_amount: 2160
+      )
+    end
+
+    it "新規JournalEntryを作成しないこと" do
+      expect {
+        described_class.perform_now(batch.id)
+      }.not_to change(JournalEntry, :count)
+    end
+
+    it "ステータスをduplicateに更新すること" do
+      described_class.perform_now(batch.id)
+
+      batch.reload
+      expect(batch.status).to eq("duplicate")
+      expect(batch.error_message).to include("重複検知")
+    end
+  end
+
+  context "重複レシート（インボイス番号なし・支払先一致）の場合" do
+    let(:mock_result_data) do
+      super().merge(
+        transactions: [
+          super()[:transactions].first.merge(debit_invoice: "")
+        ]
+      )
+    end
+
+    before do
+      create(:journal_entry, :receipt,
+        client: client,
+        source_period: "2026年3月",
+        transaction_no: 1,
+        date: "2026-03-01",
+        debit_invoice: "",
+        debit_partner: "マックスバリュ やんばる店",
+        debit_amount: 2160
+      )
+    end
+
+    it "ステータスをduplicateに更新し新規JEを作らないこと" do
+      expect {
+        described_class.perform_now(batch.id)
+      }.not_to change(JournalEntry, :count)
+
+      batch.reload
+      expect(batch.status).to eq("duplicate")
+    end
+  end
+
+  context "同月に別レシートがある場合（transaction_no衝突しないこと）" do
+    before do
+      create(:journal_entry, :receipt,
+        client: client,
+        source_period: "2026年3月",
+        transaction_no: 1,
+        date: "2026-03-02",
+        debit_invoice: "T0000000000001",
+        debit_partner: "別店舗",
+        debit_amount: 500
+      )
+    end
+
+    it "transaction_noがmax+1で採番されること" do
+      described_class.perform_now(batch.id)
+
+      new_entry = JournalEntry.where(statement_batch_id: batch.id).first
+      expect(new_entry.transaction_no).to eq(2)
+    end
+  end
+
   it "レコードが存在しない場合は静かに終了すること" do
     expect {
       described_class.perform_now(-1)

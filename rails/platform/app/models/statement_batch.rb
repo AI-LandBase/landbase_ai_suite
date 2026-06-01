@@ -1,5 +1,5 @@
 class StatementBatch < ApplicationRecord
-  STATUSES = %w[processing completed failed].freeze
+  STATUSES = %w[processing completed failed duplicate].freeze
 
   belongs_to :client
   has_many :journal_entries, dependent: :nullify

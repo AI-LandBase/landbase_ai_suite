@@ -68,12 +68,17 @@ class ReceiptLineProcessJob < ApplicationJob
     result = service.call
 
     if result.success?
-      ActiveRecord::Base.transaction do
-        create_journal_entries(batch, result.data)
-        batch.update!(status: "completed", summary: result.data[:summary] || {})
-      end
+      begin
+        ActiveRecord::Base.transaction do
+          create_journal_entries(batch, result.data)
+          batch.update!(status: "completed", summary: result.data[:summary] || {})
+        end
 
-      @line_service.push(line_user_id, format_success_message(result.data))
+        @line_service.push(line_user_id, format_success_message(result.data))
+      rescue DuplicateFound => e
+        batch.update!(status: "duplicate", error_message: "重複検知: 既存 JE id=#{e.existing_entry.id}")
+        @line_service.push(line_user_id, format_duplicate_message(e.existing_entry))
+      end
     elsif result.retryable?
       raise RetryableError, result.error
     else
@@ -87,6 +92,18 @@ class ReceiptLineProcessJob < ApplicationJob
       end
       @line_service.push(line_user_id, message)
     end
+  end
+
+  def format_duplicate_message(existing_entry)
+    debit_line = existing_entry.journal_entry_lines.find_by(side: "debit")
+    partner = debit_line&.partner.presence || existing_entry.description
+    amount = debit_line&.amount
+
+    lines = ["このレシートは処理済みです。"]
+    lines << "📅 #{existing_entry.date} に登録"
+    lines << "🏪 #{partner}" if partner.present?
+    lines << "💰 ¥#{amount}" if amount
+    lines.join("\n")
   end
 
   def format_success_message(data)
