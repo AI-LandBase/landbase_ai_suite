@@ -8,7 +8,8 @@ RSpec.describe CleaningManualGenerateJob, type: :job do
     CleaningManualGeneratorService::Result.new(
       success: true,
       data: { property_name: "テスト", areas: [], supplies_needed: [], total_estimated_minutes: 0 },
-      error: nil
+      error: nil,
+      reason: nil
     )
   end
 
@@ -32,10 +33,10 @@ RSpec.describe CleaningManualGenerateJob, type: :job do
     expect(manual.error_message).to be_nil
   end
 
-  context "サービスが失敗した場合" do
+  context "non-retryableな失敗の場合" do
     let(:mock_result) do
       CleaningManualGeneratorService::Result.new(
-        success: false, data: {}, error: "APIエラー"
+        success: false, data: {}, error: "APIキー未設定", reason: :config_error
       )
     end
 
@@ -44,7 +45,37 @@ RSpec.describe CleaningManualGenerateJob, type: :job do
 
       manual.reload
       expect(manual.status).to eq("failed")
-      expect(manual.error_message).to eq("APIエラー")
+      expect(manual.error_message).to eq("APIキー未設定")
+    end
+  end
+
+  context "retryableな失敗の場合" do
+    let(:mock_result) do
+      CleaningManualGeneratorService::Result.new(
+        success: false, data: {}, error: "Anthropic API エラー: timeout", reason: :api_error
+      )
+    end
+
+    it "RetryableErrorをraiseすること" do
+      job = described_class.new(manual.id)
+
+      expect { job.perform(manual.id) }.to raise_error(CleaningManualGenerateJob::RetryableError, "Anthropic API エラー: timeout")
+    end
+  end
+
+  context "file_not_found の場合" do
+    let(:mock_result) do
+      CleaningManualGeneratorService::Result.new(
+        success: false, data: {}, error: "画像ファイルが見つかりません: ActiveStorage::FileNotFoundError", reason: :file_not_found
+      )
+    end
+
+    it "リトライせずステータスをfailedに更新すること" do
+      described_class.perform_now(manual.id)
+
+      manual.reload
+      expect(manual.status).to eq("failed")
+      expect(manual.error_message).to include("画像ファイルが見つかりません")
     end
   end
 

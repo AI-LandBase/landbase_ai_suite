@@ -29,7 +29,9 @@ class ReceiptLineProcessJob < ApplicationJob
 
     fingerprint = Digest::SHA256.hexdigest(image_binary)
 
-    existing = StatementBatch.find_by(client: client, pdf_fingerprint: fingerprint)
+    existing = StatementBatch
+      .where(client: client, pdf_fingerprint: fingerprint, status: %w[processing completed duplicate])
+      .first
     if existing
       if existing.status == "processing"
         process_receipt(existing, line_user_id)
@@ -87,6 +89,8 @@ class ReceiptLineProcessJob < ApplicationJob
       message = case result.reason
       when :non_receipt
         "領収書またはレシートの画像を送信してください。"
+      when :file_not_found
+        "画像ファイルの読み込みに失敗しました。もう一度送信してください。"
       else
         "処理中にエラーが発生しました。もう一度お試しください。"
       end
