@@ -93,6 +93,21 @@ RSpec.describe AmexStatementProcessJob, type: :job do
     expect(credit.amount).to eq(3280)
   end
 
+  context "同一source_periodに既存のJournalEntryがある場合" do
+    before do
+      create(:journal_entry, :amex, client: client, source_period: "2026年1月", transaction_no: 10)
+    end
+
+    it "transaction_noをmax+1から採番してユニーク制約衝突を回避すること" do
+      described_class.perform_now(batch.id)
+
+      batch.reload
+      expect(batch.status).to eq("completed")
+      entry = batch.journal_entries.first
+      expect(entry.transaction_no).to eq(11)
+    end
+  end
+
   context "retryableなエラーの場合" do
     let(:mock_result) do
       AmexStatementProcessorService::Result.new(

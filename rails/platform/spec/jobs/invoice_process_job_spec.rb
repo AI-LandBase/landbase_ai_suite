@@ -103,6 +103,21 @@ RSpec.describe InvoiceProcessJob, type: :job do
     expect(entry.source_period).to eq("2026年2月")
   end
 
+  context "同一source_periodに既存のJournalEntryがある場合" do
+    before do
+      create(:journal_entry, :invoice, client: client, source_period: "2026年2月", transaction_no: 3)
+    end
+
+    it "transaction_noをmax+1から採番してユニーク制約衝突を回避すること" do
+      described_class.perform_now(batch.id)
+
+      batch.reload
+      expect(batch.status).to eq("completed")
+      entry = batch.journal_entries.first
+      expect(entry.transaction_no).to eq(4)
+    end
+  end
+
   context "retryableなエラーの場合" do
     let(:mock_result) do
       InvoiceProcessorService::Result.new(
