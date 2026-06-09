@@ -266,6 +266,8 @@ GET /api/v1/cleaning_manuals/:id/status
 - [ADR 0005: マルチテナント戦略](./docs/adr/0005-multitenancy-strategy.md)
 - [ADR 0006: Platform 基幹アプリ分離](./docs/adr/0006-platform-app-separation.md)
 - [ADR 0007: Caddy リバースプロキシ](./docs/adr/0007-caddy-reverse-proxy-multi-domain.md)
+- [ADR 0008: リポジトリ分割（landbase_ai_suite / AccountingAI / service_core）](./docs/adr/0008-repository-split.md)
+- [ADR 0009: AccountingAI 機能拡張のスコープと優先順位（2026-06）](./docs/adr/0009-accounting-feature-scope-2026-06.md)
 
 ---
 
