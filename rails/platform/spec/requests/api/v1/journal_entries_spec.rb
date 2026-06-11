@@ -59,6 +59,36 @@ RSpec.describe "Api::V1::JournalEntries", type: :request do
       expect(data["entries"].first["status"]).to eq("review_required")
     end
 
+    it "csv_export_status=unexported で未出力のみ返すこと" do
+      create(:journal_entry, client: client, exported_at: nil,
+             debit_account: "未出力", debit_amount: 1000, credit_amount: 1000)
+      create(:journal_entry, client: client, exported_at: Time.current,
+             debit_account: "出力済", debit_amount: 2000, credit_amount: 2000)
+
+      get "/api/v1/journal_entries",
+          params: { client_code: client_code, csv_export_status: "unexported" },
+          headers: authorization_header
+
+      data = JSON.parse(response.body)
+      expect(data["entries"].length).to eq(1)
+      expect(data["entries"].first["debit_account"]).to eq("未出力")
+    end
+
+    it "csv_export_status=exported で出力済みのみ返すこと" do
+      create(:journal_entry, client: client, exported_at: nil,
+             debit_account: "未出力", debit_amount: 1000, credit_amount: 1000)
+      create(:journal_entry, client: client, exported_at: Time.current,
+             debit_account: "出力済", debit_amount: 2000, credit_amount: 2000)
+
+      get "/api/v1/journal_entries",
+          params: { client_code: client_code, csv_export_status: "exported" },
+          headers: authorization_header
+
+      data = JSON.parse(response.body)
+      expect(data["entries"].length).to eq(1)
+      expect(data["entries"].first["debit_account"]).to eq("出力済")
+    end
+
     it "日付範囲でフィルタできること" do
       create(:journal_entry, client: client, date: Date.new(2026, 1, 15), debit_amount: 1000, credit_amount: 1000)
       create(:journal_entry, client: client, date: Date.new(2025, 12, 1), debit_amount: 2000, credit_amount: 2000)

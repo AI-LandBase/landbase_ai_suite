@@ -8,6 +8,10 @@ module Api
 
         entries = entries.by_source(params[:source_type]) if params[:source_type].present?
         entries = entries.review_required if params[:review_required] == "true"
+        case params[:csv_export_status]
+        when "unexported" then entries = entries.csv_unexported
+        when "exported"   then entries = entries.csv_exported
+        end
         if params[:date_from].present? && params[:date_to].present?
           begin
             entries = entries.in_period(Date.parse(params[:date_from]), Date.parse(params[:date_to]))
@@ -54,6 +58,10 @@ module Api
         entries = @current_client.journal_entries.includes(:journal_entry_lines)
 
         entries = entries.by_source(params[:source_type]) if params[:source_type].present?
+        case params[:csv_export_status]
+        when "unexported" then entries = entries.csv_unexported
+        when "exported"   then entries = entries.csv_exported
+        end
         if params[:statement_batch_id].present?
           entries = entries.where(statement_batch_id: params[:statement_batch_id])
         end

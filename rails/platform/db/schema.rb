@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_01_000003) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_11_105306) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -155,9 +155,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_01_000003) do
     t.bigint "statement_batch_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "exported_at", comment: "CSV出力日時（NULL=未出力）"
     t.index ["client_id", "source_type", "source_period", "transaction_no"], name: "idx_journal_entries_unique_transaction", unique: true
     t.index ["client_id"], name: "index_journal_entries_on_client_id"
     t.index ["date"], name: "idx_journal_entries_date"
+    t.index ["exported_at"], name: "idx_journal_entries_csv_unexported", where: "(exported_at IS NULL)"
     t.index ["source_type", "source_period"], name: "idx_journal_entries_source"
     t.index ["statement_batch_id"], name: "index_journal_entries_on_statement_batch_id"
     t.index ["status"], name: "idx_journal_entries_review_required", where: "((status)::text = 'review_required'::text)"
