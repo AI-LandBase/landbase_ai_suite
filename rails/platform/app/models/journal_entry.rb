@@ -19,6 +19,8 @@ class JournalEntry < ApplicationRecord
   scope :by_source, ->(type) { where(source_type: type) }
   scope :review_required, -> { where(status: "review_required") }
   scope :in_period, ->(from, to) { where(date: from..to) }
+  scope :csv_unexported, -> { where(exported_at: nil) }
+  scope :csv_exported, -> { where.not(exported_at: nil) }
 
   # === 便利メソッド ===
   def debit_lines
