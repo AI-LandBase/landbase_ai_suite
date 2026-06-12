@@ -89,6 +89,20 @@ RSpec.describe "Api::V1::JournalEntries", type: :request do
       expect(data["entries"].first["debit_account"]).to eq("出力済")
     end
 
+    it "不正な csv_export_status (typo等) は silent acceptance で全件返すこと" do
+      create(:journal_entry, client: client, exported_at: nil,
+             debit_account: "未出力", debit_amount: 1000, credit_amount: 1000)
+      create(:journal_entry, client: client, exported_at: Time.current,
+             debit_account: "出力済", debit_amount: 2000, credit_amount: 2000)
+
+      get "/api/v1/journal_entries",
+          params: { client_code: client_code, csv_export_status: "typo" },
+          headers: authorization_header
+
+      data = JSON.parse(response.body)
+      expect(data["entries"].length).to eq(2)
+    end
+
     it "日付範囲でフィルタできること" do
       create(:journal_entry, client: client, date: Date.new(2026, 1, 15), debit_amount: 1000, credit_amount: 1000)
       create(:journal_entry, client: client, date: Date.new(2025, 12, 1), debit_amount: 2000, credit_amount: 2000)

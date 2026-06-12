@@ -93,6 +93,12 @@ RSpec.describe "Web::JournalEntries", type: :request do
           expect(response.body).to include("未出力勘定")
           expect(response.body).to include("出力済勘定")
         end
+
+        it "不正値（typo等）は silent acceptance で全件表示すること" do
+          get journal_entries_path(client_code: client.code, csv_export_status: "typo")
+          expect(response.body).to include("未出力勘定")
+          expect(response.body).to include("出力済勘定")
+        end
       end
     end
   end

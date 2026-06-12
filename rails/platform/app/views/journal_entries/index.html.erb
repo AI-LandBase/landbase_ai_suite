@@ -31,6 +31,7 @@
         <option value="unexported" <%= "selected" if @csv_export_status == "unexported" %>>未出力のみ</option>
         <option value="exported" <%= "selected" if @csv_export_status == "exported" %>>出力済みのみ</option>
       </select>
+      <p class="mt-1 text-xs text-gray-500">弥生CSV等でエクスポート済みの仕訳は「出力済み」になります</p>
     </div>
     <%= render "shared/button", label: "検索", variant: :neutral, type: "submit" %>
     <div class="relative inline-block" data-controller="dropdown">
