@@ -83,8 +83,8 @@ Rails.application.routes.draw do
   resources :amex_statements, only: [ :new ]
   resources :bank_statements, only: [ :new ]
   resources :invoices, only: [ :new ]
-  resources :statement_batches, only: [ :show ]
-  resources :journal_entries, only: [ :index, :show, :edit, :update ] do
+  resources :statement_batches, only: [ :show, :destroy ]
+  resources :journal_entries, only: [ :index, :show, :edit, :update, :destroy ] do
     collection do
       get :export
     end

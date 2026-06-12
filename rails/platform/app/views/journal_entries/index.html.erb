@@ -133,6 +133,19 @@
                 <% if entry.status == "review_required" %>
                   <%= link_to "編集", edit_journal_entry_path(entry, client_code: @client_code), class: "text-amber-500 hover:text-amber-400" %>
                 <% end %>
+                <%= button_to "削除",
+                      journal_entry_path(entry, client_code: @client_code),
+                      method: :delete,
+                      form: {
+                        class: "inline",
+                        data: {
+                          controller: "double-confirm",
+                          action: "submit->double-confirm#confirm",
+                          "double-confirm-first-message-value": "この仕訳を削除してよろしいですか？",
+                          "double-confirm-second-message-value": "本当に削除しますか？元に戻せません。"
+                        }
+                      },
+                      class: "text-red-400 hover:text-red-300 bg-transparent border-0 p-0 cursor-pointer" %>
               </td>
             </tr>
           <% end %>

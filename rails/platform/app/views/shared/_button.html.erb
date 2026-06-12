@@ -37,13 +37,13 @@
   base += " disabled:bg-gray-600 disabled:cursor-not-allowed" if disabled
   css = [base, variant_classes[variant], size_classes[size], local_assigns[:class]].compact.join(" ")
 %>
-<% if local_assigns[:href] %>
+<% if local_assigns[:method] %>
+  <%= button_to label, local_assigns[:href] || url_for, method: local_assigns[:method],
+        form: local_assigns[:form], class: css, data: local_assigns[:data] %>
+<% elsif local_assigns[:href] %>
   <%= link_to local_assigns[:href], class: css, data: local_assigns[:data] do %>
     <%= sanitize(local_assigns[:icon], tags: %w[svg path circle rect line polyline polygon g use defs clipPath], attributes: %w[viewBox d fill stroke stroke-width stroke-linecap stroke-linejoin class xmlns width height cx cy r x y x1 y1 x2 y2 points transform clip-path]) if local_assigns[:icon] %><%= label %>
   <% end %>
-<% elsif local_assigns[:method] %>
-  <%= button_to label, local_assigns[:href] || url_for, method: local_assigns[:method],
-        form: local_assigns[:form], class: css, data: local_assigns[:data] %>
 <% else %>
   <%= tag.button type: local_assigns.fetch(:type, "button"), class: css,
         disabled: disabled || nil, data: local_assigns[:data] do %>
