@@ -23,7 +23,24 @@
      data-batch-progress-status-url-value="<%= status_url %>"
      data-batch-progress-status-value="<%= @batch.status %>">
 
-  <h1 class="text-2xl font-bold mb-6"><%= source_label %>処理状況</h1>
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold"><%= source_label %>処理状況</h1>
+    <% je_count = @batch.journal_entries.count %>
+    <%= render "shared/button",
+          label: "バッチごと削除",
+          variant: :danger,
+          size: :sm,
+          href: statement_batch_path(@batch),
+          method: :delete,
+          form: {
+            data: {
+              controller: "double-confirm",
+              action: "submit->double-confirm#confirm",
+              "double-confirm-first-message-value": "このバッチと関連する仕訳 #{je_count} 件を削除します。よろしいですか？",
+              "double-confirm-second-message-value": "本当に削除しますか？元に戻せません。"
+            }
+          } %>
+  </div>
 
   <%# ローディング（処理中のみ表示） %>
   <div data-batch-progress-target="loading" class="<%= @batch.status == 'processing' ? '' : 'hidden' %> mt-8 text-center">
