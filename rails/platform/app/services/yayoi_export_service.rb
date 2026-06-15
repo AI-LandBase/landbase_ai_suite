@@ -4,6 +4,10 @@ class YayoiExportService
   SINGLE_ENTRY_FLAG = "2000"
   SINGLE_TYPE = "0"
 
+  TAX_CATEGORY_STANDARD = "課対仕入込10%"
+  TAX_CATEGORY_REDUCED  = "課対仕入込軽減8%"
+  TAX_CATEGORY_OUT      = "対象外"
+
   def export_single_entry(entries)
     entries = entries.includes(:journal_entry_lines) if entries.respond_to?(:includes)
 
@@ -29,14 +33,14 @@ class YayoiExportService
       debit&.sub_account&.presence || "",      # 4: 借方補助科目
       debit&.department&.presence || "",       # 5: 借方部門
       debit&.partner&.presence || "",          # 6: 借方取引先
-      debit&.tax_category&.presence || "",     # 7: 借方税区分
+      map_tax_category(debit&.tax_category),   # 7: 借方税区分
       debit&.invoice&.presence || "",          # 8: 借方インボイス
       debit&.amount || 0,                      # 9: 借方金額
       credit&.account || "",                   # 10: 貸方勘定科目
       credit&.sub_account&.presence || "",     # 11: 貸方補助科目
       credit&.department&.presence || "",      # 12: 貸方部門
       credit&.partner&.presence || "",         # 13: 貸方取引先
-      credit&.tax_category&.presence || "",    # 14: 貸方税区分
+      map_tax_category(credit&.tax_category),  # 14: 貸方税区分
       credit&.invoice&.presence || "",         # 15: 貸方インボイス
       credit&.amount || 0,                     # 16: 貸方金額
       entry.description.presence || "",        # 17: 摘要
@@ -49,5 +53,19 @@ class YayoiExportService
       "",                                      # 24: 予備3
       ""                                       # 25: 予備4
     ]
+  end
+
+  # クレカ明細等は適格／非適格の判定不能のため、すべて適格扱いで弥生の3区分に丸める。
+  # 空文字は弥生で「税区分なし」を意味するため、そのまま空文字で返す。
+  def map_tax_category(raw)
+    return "" if raw.blank?
+
+    if raw.include?("軽減") || raw.include?("8%")
+      TAX_CATEGORY_REDUCED
+    elsif raw.include?("10%")
+      TAX_CATEGORY_STANDARD
+    else
+      TAX_CATEGORY_OUT
+    end
   end
 end

@@ -1,5 +1,5 @@
 class ReceiptProcessorService
-  NON_RETRYABLE_REASONS = %i[config_error non_receipt unsupported_format].freeze
+  NON_RETRYABLE_REASONS = %i[config_error non_receipt unsupported_format file_not_found].freeze
 
   Result = Data.define(:success, :data, :error, :reason) do
     alias_method :success?, :success
@@ -180,6 +180,8 @@ class ReceiptProcessorService
     end
 
     Result.new(success: true, data: data, error: nil, reason: nil)
+  rescue ActiveStorage::FileNotFoundError => e
+    Result.new(success: false, data: {}, error: "画像ファイルが見つかりません: #{e.message}", reason: :file_not_found)
   rescue Anthropic::Errors::APIError => e
     Result.new(success: false, data: {}, error: "Anthropic API エラー: #{e.message}", reason: :api_error)
   rescue JSON::ParserError => e

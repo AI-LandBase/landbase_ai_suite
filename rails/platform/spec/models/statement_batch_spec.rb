@@ -58,14 +58,14 @@ RSpec.describe StatementBatch, type: :model do
       expect(batch.journal_entries).to contain_exactly(entry)
     end
 
-    it "削除時にjournal_entriesのstatement_batch_idがnullになる" do
+    it "削除時に紐づく journal_entries と journal_entry_lines も一緒に削除される (dependent: :destroy)" do
       batch = create(:statement_batch)
-      entry = create(:journal_entry, client: batch.client, statement_batch: batch)
+      create(:journal_entry, client: batch.client, statement_batch: batch,
+             debit_amount: 1000, credit_amount: 1000)
 
-      batch.destroy
-
-      entry.reload
-      expect(entry.statement_batch_id).to be_nil
+      expect { batch.destroy }
+        .to change(JournalEntry, :count).by(-1)
+        .and change(JournalEntryLine, :count).by(-2)
     end
   end
 

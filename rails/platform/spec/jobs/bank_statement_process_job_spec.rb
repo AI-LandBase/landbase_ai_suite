@@ -84,6 +84,28 @@ RSpec.describe BankStatementProcessJob, type: :job do
     expect(entry.statement_batch).to eq(batch)
     expect(entry.source_type).to eq("bank")
     expect(entry.tag).to eq("bank")
+    expect(entry.transaction_no).to eq(1)
+  end
+
+  context "同一source_periodに既存のJournalEntryがある場合" do
+    before do
+      create(:journal_entry, :bank, client: client, source_period: "2026年1月", transaction_no: 5)
+    end
+
+    it "transaction_noをmax+1から採番してユニーク制約衝突を回避すること" do
+      described_class.perform_now(batch.id)
+
+      batch.reload
+      expect(batch.status).to eq("completed")
+      entry = batch.journal_entries.first
+      expect(entry.transaction_no).to eq(6)
+    end
+  end
+
+  it "成功時のJournalEntry詳細を検証" do
+    described_class.perform_now(batch.id)
+
+    entry = JournalEntry.last
 
     debit = entry.debit_lines.first
     expect(debit.account).to eq("水道光熱費")

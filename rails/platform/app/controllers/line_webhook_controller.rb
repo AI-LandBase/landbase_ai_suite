@@ -58,12 +58,12 @@ class LineWebhookController < ApplicationController
     line_user_id = event.dig("source", "userId")
     return unless line_user_id.present?
 
-    client = Client.find_by(line_user_id: line_user_id)
+    client = LineFollower.find_by(line_user_id: line_user_id)&.client
 
     unless client
       LineMessagingService.reply(
         event["replyToken"],
-        "このLINEアカウントは未登録です。管理者にお問い合わせください。"
+        "このLINEアカウントは未登録です。一度ブロックを解除して友だち追加し直してください。"
       )
       return
     end
@@ -79,14 +79,30 @@ class LineWebhookController < ApplicationController
     line_user_id = event.dig("source", "userId")
     return unless line_user_id.present?
 
-    client = Client.find_by(line_user_id: line_user_id)
+    client = default_client
 
-    message = if client
-      "#{client.name}さん、友だち追加ありがとうございます！\n領収書・レシートの画像を送信すると、自動で仕訳データを作成します。"
-    else
-      "友だち追加ありがとうございます！\nこのLINEアカウントはまだ登録されていません。管理者にお問い合わせください。"
+    unless client
+      LineMessagingService.reply(
+        event["replyToken"],
+        "友だち追加ありがとうございます！\nサービスの初期設定が完了していません。管理者にお問い合わせください。"
+      )
+      return
     end
 
-    LineMessagingService.reply(event["replyToken"], message)
+    LineFollower.find_or_create_by!(line_user_id: line_user_id) do |follower|
+      follower.client = client
+    end
+
+    LineMessagingService.reply(
+      event["replyToken"],
+      "友だち追加ありがとうございます！\n#{client.name}のレシート受付に登録しました。\n領収書・レシートの画像を送信すると、自動で仕訳データを作成します。"
+    )
+  end
+
+  def default_client
+    code = ENV["LINE_DEFAULT_CLIENT_CODE"]
+    return nil unless code.present?
+
+    Client.find_by(code: code)
   end
 end

@@ -29,7 +29,9 @@ class ReceiptLineProcessJob < ApplicationJob
 
     fingerprint = Digest::SHA256.hexdigest(image_binary)
 
-    existing = StatementBatch.find_by(client: client, pdf_fingerprint: fingerprint)
+    existing = StatementBatch
+      .where(client: client, pdf_fingerprint: fingerprint, status: %w[processing completed duplicate])
+      .first
     if existing
       if existing.status == "processing"
         process_receipt(existing, line_user_id)
@@ -68,12 +70,17 @@ class ReceiptLineProcessJob < ApplicationJob
     result = service.call
 
     if result.success?
-      ActiveRecord::Base.transaction do
-        create_journal_entries(batch, result.data)
-        batch.update!(status: "completed", summary: result.data[:summary] || {})
-      end
+      begin
+        ActiveRecord::Base.transaction do
+          create_journal_entries(batch, result.data)
+          batch.update!(status: "completed", summary: result.data[:summary] || {})
+        end
 
-      @line_service.push(line_user_id, format_success_message(result.data))
+        @line_service.push(line_user_id, format_success_message(result.data))
+      rescue DuplicateFound => e
+        batch.update!(status: "duplicate", error_message: "重複検知: 既存 JE id=#{e.existing_entry.id}")
+        @line_service.push(line_user_id, format_duplicate_message(e.existing_entry))
+      end
     elsif result.retryable?
       raise RetryableError, result.error
     else
@@ -82,6 +89,8 @@ class ReceiptLineProcessJob < ApplicationJob
       message = case result.reason
       when :non_receipt
         "領収書またはレシートの画像を送信してください。"
+      when :file_not_found
+        "画像ファイルの読み込みに失敗しました。もう一度送信してください。"
       else
         "処理中にエラーが発生しました。もう一度お試しください。"
       end
@@ -89,16 +98,35 @@ class ReceiptLineProcessJob < ApplicationJob
     end
   end
 
+  def format_duplicate_message(existing_entry)
+    debit_line = existing_entry.journal_entry_lines.find_by(side: "debit")
+    partner = debit_line&.partner.presence || existing_entry.description
+    amount = debit_line&.amount
+
+    lines = ["このレシートは処理済みです。"]
+    lines << "📅 #{existing_entry.date} に登録"
+    lines << "🏪 #{partner}" if partner.present?
+    lines << "💰 ¥#{amount}" if amount
+    lines.join("\n")
+  end
+
   def format_success_message(data)
-    txn = data[:transactions]&.first
-    return "領収書を処理しました。" unless txn
+    txns = data[:transactions] || []
+    first_txn = txns.first
+    return "領収書を処理しました。" unless first_txn
+
+    total = data.dig(:summary, :total_amount) || txns.sum { |t| t[:debit_amount].to_i }
 
     lines = ["📝 領収書を処理しました", ""]
-    lines << "📅 日付: #{txn[:date]}"
-    lines << "🏪 支払先: #{txn[:debit_partner]}" if txn[:debit_partner].present?
-    lines << "💰 金額: ¥#{txn[:debit_amount]&.to_s(:delimited) rescue txn[:debit_amount]}"
-    lines << "📂 勘定科目: #{txn[:debit_account]}"
-    lines << "🔍 判定元: #{txn[:status] == "review_required" ? "AI推論（要確認）" : "AIマッチング"}"
+    lines << "📅 日付: #{first_txn[:date]}"
+    lines << "🏪 支払先: #{first_txn[:debit_partner]}" if first_txn[:debit_partner].present?
+    lines << "💰 合計金額: ¥#{ActiveSupport::NumberHelper.number_to_delimited(total)}"
+    if txns.size > 1
+      lines << "📂 内訳: #{txns.size}件の仕訳"
+    else
+      lines << "📂 勘定科目: #{first_txn[:debit_account]}"
+    end
+    lines << "🔍 判定元: #{first_txn[:status] == "review_required" ? "AI推論（要確認）" : "AIマッチング"}"
     lines.join("\n")
   end
 

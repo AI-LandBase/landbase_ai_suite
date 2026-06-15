@@ -17,6 +17,20 @@
       <% else %>
         <%= render "shared/badge", label: "OK", variant: :success, size: :md %>
       <% end %>
+      <%= render "shared/button",
+            label: "削除",
+            variant: :danger,
+            size: :sm,
+            href: journal_entry_path(@entry, client_code: @client_code),
+            method: :delete,
+            form: {
+              data: {
+                controller: "double-confirm",
+                action: "submit->double-confirm#confirm",
+                "double-confirm-first-message-value": "この仕訳を削除してよろしいですか？",
+                "double-confirm-second-message-value": "本当に削除しますか？元に戻せません。"
+              }
+            } %>
     </div>
   </div>
 

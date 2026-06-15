@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe ReceiptLineProcessJob, type: :job do
-  let(:client) { create(:client, line_user_id: "U1234567890abcdef") }
-  let(:line_user_id) { client.line_user_id }
+  let(:client) { create(:client) }
+  let(:line_user_id) { "U1234567890abcdef" }
   let(:message_id) { "msg_001" }
   let(:image_binary) { "\xFF\xD8\xFF\xE0test_image_data".b }
   let(:fingerprint) { Digest::SHA256.hexdigest(image_binary) }
@@ -99,6 +99,77 @@ RSpec.describe ReceiptLineProcessJob, type: :job do
           a_string_including("領収書を処理しました")
         )
       end
+
+      it "合計金額がデリミタ付きで表示されること（単一取引）" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          a_string_including("合計金額: ¥1,080")
+        )
+      end
+    end
+
+    context "正常系（複数取引のレシート）" do
+      let(:success_data_multi) do
+        {
+          is_receipt: true,
+          receipt_date: "2026-03-13",
+          transactions: [
+            {
+              transaction_no: 1,
+              date: "2026-03-13",
+              debit_account: "仕入高",
+              debit_partner: "綿半",
+              debit_invoice: "T1111111111111",
+              debit_amount: 4597,
+              credit_account: "現金",
+              credit_amount: 4597,
+              description: "食品",
+              status: "ok"
+            },
+            {
+              transaction_no: 2,
+              date: "2026-03-13",
+              debit_account: "消耗品費",
+              debit_partner: "綿半",
+              debit_invoice: "T1111111111111",
+              debit_amount: 1795,
+              credit_account: "現金",
+              credit_amount: 1795,
+              description: "日用品",
+              status: "ok"
+            }
+          ],
+          summary: { total_amount: 6392 }
+        }
+      end
+      let(:multi_result) do
+        ReceiptProcessorService::Result.new(success: true, data: success_data_multi, error: nil, reason: nil)
+      end
+      let(:mock_service) { instance_double(ReceiptProcessorService, call: multi_result) }
+
+      before do
+        allow(ReceiptProcessorService).to receive(:new).and_return(mock_service)
+      end
+
+      it "summary.total_amountをデリミタ付きで表示すること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          a_string_including("合計金額: ¥6,392")
+        )
+      end
+
+      it "件数で内訳を示すこと" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          a_string_including("内訳: 2件の仕訳")
+        )
+      end
     end
 
     context "画像取得失敗" do
@@ -137,6 +208,62 @@ RSpec.describe ReceiptLineProcessJob, type: :job do
       end
     end
 
+    context "過去にfailedになった同一画像" do
+      let(:mock_service) { instance_double(ReceiptProcessorService, call: receipt_result) }
+
+      before do
+        create(:statement_batch, :failed, client: client, source_type: "receipt", pdf_fingerprint: fingerprint)
+        allow(ReceiptProcessorService).to receive(:new).and_return(mock_service)
+      end
+
+      it "重複扱いせず新規バッチを作成して処理すること" do
+        expect {
+          described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+        }.to change(StatementBatch, :count).by(1)
+      end
+
+      it "重複メッセージを送信しないこと" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).not_to have_received(:push).with(
+          line_user_id,
+          "この画像は既に処理済みです。"
+        )
+      end
+    end
+
+    context "file_not_found エラー" do
+      let(:file_not_found_result) do
+        ReceiptProcessorService::Result.new(
+          success: false, data: {}, error: "画像ファイルが見つかりません: ActiveStorage::FileNotFoundError", reason: :file_not_found
+        )
+      end
+
+      before do
+        allow(ReceiptProcessorService).to receive(:new).and_return(
+          instance_double(ReceiptProcessorService, call: file_not_found_result)
+        )
+      end
+
+      it "専用エラーメッセージをLINEで送信すること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          "画像ファイルの読み込みに失敗しました。もう一度送信してください。"
+        )
+      end
+
+      it "リトライせずStatementBatchをfailedにすること" do
+        expect {
+          described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+        }.not_to raise_error
+
+        batch = StatementBatch.last
+        expect(batch.status).to eq("failed")
+      end
+    end
+
     context "非領収書画像" do
       let(:non_receipt_result) do
         ReceiptProcessorService::Result.new(
@@ -164,6 +291,45 @@ RSpec.describe ReceiptLineProcessJob, type: :job do
 
         batch = StatementBatch.last
         expect(batch.status).to eq("failed")
+      end
+    end
+
+    context "重複レシート（インボイス一致）" do
+      let(:mock_service) { instance_double(ReceiptProcessorService, call: receipt_result) }
+
+      before do
+        allow(ReceiptProcessorService).to receive(:new).and_return(mock_service)
+        create(:journal_entry, :receipt,
+          client: client,
+          source_period: "2026年3月",
+          transaction_no: 1,
+          date: "2026-03-13",
+          debit_invoice: "T1234567890123",
+          debit_partner: "別店舗",
+          debit_amount: 1080
+        )
+      end
+
+      it "新規JournalEntryを作成しないこと" do
+        expect {
+          described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+        }.not_to change(JournalEntry, :count)
+      end
+
+      it "StatementBatchをduplicateにすること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        batch = StatementBatch.last
+        expect(batch.status).to eq("duplicate")
+      end
+
+      it "重複通知をLINEで送信すること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          a_string_including("このレシートは処理済みです")
+        )
       end
     end
 

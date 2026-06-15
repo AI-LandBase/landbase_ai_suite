@@ -65,6 +65,41 @@ RSpec.describe "Web::JournalEntries", type: :request do
 
         expect(response.body).to include("—")
       end
+
+      describe "csv_export_status フィルタ" do
+        let!(:unexported_entry) do
+          create(:journal_entry, client: client, exported_at: nil,
+                 debit_account: "未出力勘定", debit_amount: 1000, credit_amount: 1000)
+        end
+        let!(:exported_entry) do
+          create(:journal_entry, client: client, exported_at: Time.current,
+                 debit_account: "出力済勘定", debit_amount: 2000, credit_amount: 2000)
+        end
+
+        it "unexported指定で未出力のみ表示すること" do
+          get journal_entries_path(client_code: client.code, csv_export_status: "unexported")
+          expect(response.body).to include("未出力勘定")
+          expect(response.body).not_to include("出力済勘定")
+        end
+
+        it "exported指定で出力済みのみ表示すること" do
+          get journal_entries_path(client_code: client.code, csv_export_status: "exported")
+          expect(response.body).to include("出力済勘定")
+          expect(response.body).not_to include("未出力勘定")
+        end
+
+        it "未指定で両方表示すること" do
+          get journal_entries_path(client_code: client.code)
+          expect(response.body).to include("未出力勘定")
+          expect(response.body).to include("出力済勘定")
+        end
+
+        it "不正値（typo等）は silent acceptance で全件表示すること" do
+          get journal_entries_path(client_code: client.code, csv_export_status: "typo")
+          expect(response.body).to include("未出力勘定")
+          expect(response.body).to include("出力済勘定")
+        end
+      end
     end
   end
 
@@ -141,6 +176,32 @@ RSpec.describe "Web::JournalEntries", type: :request do
         expect(response).to have_http_status(:bad_request)
       end
 
+      it "エクスポート後に対象仕訳の exported_at がセットされること" do
+        entry = create(:journal_entry, client: client, debit_amount: 1000, credit_amount: 1000)
+        expect(entry.exported_at).to be_nil
+
+        get export_journal_entries_path(client_code: client.code, format_type: "csv")
+
+        expect(response).to have_http_status(:ok)
+        expect(entry.reload.exported_at).to be_present
+      end
+
+      it "csv_export_status=unexported で未出力のみエクスポートし、マーキングされること" do
+        unexported = create(:journal_entry, client: client, exported_at: nil,
+                            debit_account: "未出力勘定", debit_amount: 1000, credit_amount: 1000)
+        already_exported = create(:journal_entry, client: client, exported_at: 1.day.ago,
+                                  debit_account: "既出力勘定", debit_amount: 2000, credit_amount: 2000)
+
+        get export_journal_entries_path(client_code: client.code,
+                                        csv_export_status: "unexported", format_type: "csv")
+
+        csv = CSV.parse(response.body.sub("﻿", ""), headers: true)
+        expect(csv.size).to eq(1)
+        expect(csv.first["借方勘定科目"]).to eq("未出力勘定")
+        expect(unexported.reload.exported_at).to be_present
+        expect(already_exported.reload.exported_at).to be_within(1.minute).of(1.day.ago)
+      end
+
       it "source_typeでフィルタしてエクスポートできること" do
         create(:journal_entry, :amex, client: client, debit_amount: 1000, credit_amount: 1000)
         create(:journal_entry, :bank, client: client, debit_amount: 2000, credit_amount: 2000)
@@ -174,6 +235,44 @@ RSpec.describe "Web::JournalEntries", type: :request do
       it "ヘッダーにクライアント名が表示されること" do
         get edit_journal_entry_path(entry, client_code: client.code)
         expect(response.body).to include("テスト社")
+      end
+    end
+  end
+
+  describe "DELETE /journal_entries/:id" do
+    let!(:entry) { create(:journal_entry, client: client, debit_amount: 1000, credit_amount: 1000) }
+
+    context "未認証の場合" do
+      it "ログイン画面にリダイレクトすること" do
+        delete journal_entry_path(entry, client_code: client.code)
+        expect(response).to redirect_to(new_user_session_path)
+      end
+    end
+
+    context "認証済みの場合" do
+      before { sign_in user }
+
+      it "仕訳と関連 journal_entry_lines が削除されること" do
+        expect {
+          delete journal_entry_path(entry, client_code: client.code)
+        }.to change(JournalEntry, :count).by(-1)
+         .and change(JournalEntryLine, :count).by(-2)
+      end
+
+      it "削除後は仕訳一覧にリダイレクトすること" do
+        delete journal_entry_path(entry, client_code: client.code)
+        expect(response).to redirect_to(journal_entries_path(client_code: client.code))
+        expect(flash[:notice]).to include("削除")
+      end
+
+      it "他テナントの仕訳は削除できないこと" do
+        other_client = create(:client, code: "other_client")
+        other_entry = create(:journal_entry, client: other_client, debit_amount: 1000, credit_amount: 1000)
+
+        expect {
+          delete journal_entry_path(other_entry, client_code: client.code)
+        }.not_to change(JournalEntry, :count)
+        expect(response).to redirect_to(clients_path)
       end
     end
   end

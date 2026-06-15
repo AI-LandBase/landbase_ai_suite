@@ -23,6 +23,16 @@
         <option value="receipt" <%= "selected" if @source_type == "receipt" %>>レシート</option>
       </select>
     </div>
+    <div>
+      <label for="csv_export_status" class="block text-sm font-medium text-gray-300 mb-1">CSV出力</label>
+      <select name="csv_export_status" id="csv_export_status"
+              class="rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border">
+        <option value="">全て</option>
+        <option value="unexported" <%= "selected" if @csv_export_status == "unexported" %>>未出力のみ</option>
+        <option value="exported" <%= "selected" if @csv_export_status == "exported" %>>出力済みのみ</option>
+      </select>
+      <p class="mt-1 text-xs text-gray-500">弥生CSV等でエクスポート済みの仕訳は「出力済み」になります</p>
+    </div>
     <%= render "shared/button", label: "検索", variant: :neutral, type: "submit" %>
     <div class="relative inline-block" data-controller="dropdown">
       <button type="button" data-action="click->dropdown#toggle" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors inline-flex items-center gap-1">
@@ -31,10 +41,10 @@
       </button>
       <div data-dropdown-target="menu" class="hidden absolute right-0 mt-1 w-56 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-30">
         <%= link_to "CSV（従来形式）",
-              export_journal_entries_path(client_code: @client_code, source_type: @source_type.presence, format_type: "csv"),
+              export_journal_entries_path(client_code: @client_code, source_type: @source_type.presence, csv_export_status: @csv_export_status.presence, format_type: "csv"),
               class: "block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700" %>
         <%= link_to "弥生会計（単一仕訳）",
-              export_journal_entries_path(client_code: @client_code, source_type: @source_type.presence, format_type: "yayoi_single"),
+              export_journal_entries_path(client_code: @client_code, source_type: @source_type.presence, csv_export_status: @csv_export_status.presence, format_type: "yayoi_single"),
               class: "block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700" %>
       </div>
     </div>
@@ -123,6 +133,19 @@
                 <% if entry.status == "review_required" %>
                   <%= link_to "編集", edit_journal_entry_path(entry, client_code: @client_code), class: "text-amber-500 hover:text-amber-400" %>
                 <% end %>
+                <%= button_to "削除",
+                      journal_entry_path(entry, client_code: @client_code),
+                      method: :delete,
+                      form: {
+                        class: "inline",
+                        data: {
+                          controller: "double-confirm",
+                          action: "submit->double-confirm#confirm",
+                          "double-confirm-first-message-value": "この仕訳を削除してよろしいですか？",
+                          "double-confirm-second-message-value": "本当に削除しますか？元に戻せません。"
+                        }
+                      },
+                      class: "text-red-400 hover:text-red-300 bg-transparent border-0 p-0 cursor-pointer" %>
               </td>
             </tr>
           <% end %>

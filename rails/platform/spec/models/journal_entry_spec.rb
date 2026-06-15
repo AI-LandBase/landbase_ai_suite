@@ -191,6 +191,26 @@ RSpec.describe JournalEntry, type: :model do
         expect(result).to contain_exactly(in_range)
       end
     end
+
+    describe ".csv_unexported" do
+      it "exported_atがNULLの仕訳のみ取得する" do
+        unexported = create(:journal_entry, exported_at: nil)
+        create(:journal_entry, exported_at: Time.current)
+
+        result = described_class.csv_unexported
+        expect(result).to contain_exactly(unexported)
+      end
+    end
+
+    describe ".csv_exported" do
+      it "exported_atが入っている仕訳のみ取得する" do
+        exported = create(:journal_entry, exported_at: Time.current)
+        create(:journal_entry, exported_at: nil)
+
+        result = described_class.csv_exported
+        expect(result).to contain_exactly(exported)
+      end
+    end
   end
 
   describe ".to_csv" do

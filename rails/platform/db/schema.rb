@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_26_000004) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_11_105306) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -135,11 +135,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_26_000004) do
     t.string "industry", comment: "業種: restaurant / hotel / tour"
     t.jsonb "services", default: {}, comment: "サービス設定"
     t.string "status", default: "active", comment: "ステータス: active / trial / inactive"
-    t.string "line_user_id", comment: "LINE user ID（Webhook識別用）"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["code"], name: "idx_clients_code", unique: true
-    t.index ["line_user_id"], name: "index_clients_on_line_user_id", unique: true, where: "(line_user_id IS NOT NULL)"
     t.index ["services"], name: "idx_clients_services", using: :gin
   end
 
@@ -157,12 +155,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_26_000004) do
     t.bigint "statement_batch_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "exported_at", comment: "CSV出力日時（NULL=未出力）"
     t.index ["client_id", "source_type", "source_period", "transaction_no"], name: "idx_journal_entries_unique_transaction", unique: true
     t.index ["client_id"], name: "index_journal_entries_on_client_id"
     t.index ["date"], name: "idx_journal_entries_date"
+    t.index ["exported_at"], name: "idx_journal_entries_csv_unexported", where: "(exported_at IS NULL)"
     t.index ["source_type", "source_period"], name: "idx_journal_entries_source"
     t.index ["statement_batch_id"], name: "index_journal_entries_on_statement_batch_id"
     t.index ["status"], name: "idx_journal_entries_review_required", where: "((status)::text = 'review_required'::text)"
+  end
+
+  create_table "line_followers", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "line_user_id", null: false, comment: "LINE user ID"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_line_followers_on_client_id"
+    t.index ["line_user_id"], name: "index_line_followers_on_line_user_id", unique: true
   end
 
   create_table "journal_entry_lines", force: :cascade do |t|
@@ -219,5 +228,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_26_000004) do
   add_foreign_key "journal_entries", "clients"
   add_foreign_key "journal_entries", "statement_batches"
   add_foreign_key "journal_entry_lines", "journal_entries"
+  add_foreign_key "line_followers", "clients"
   add_foreign_key "statement_batches", "clients"
 end

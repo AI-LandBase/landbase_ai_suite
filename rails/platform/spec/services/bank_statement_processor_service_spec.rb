@@ -501,6 +501,11 @@ RSpec.describe BankStatementProcessorService do
         result = described_class::Result.new(success: false, data: {}, error: "error", reason: :config_error)
         expect(result.retryable?).to be false
       end
+
+      it "file_not_foundはretryableでないこと" do
+        result = described_class::Result.new(success: false, data: {}, error: "error", reason: :file_not_found)
+        expect(result.retryable?).to be false
+      end
     end
   end
 end

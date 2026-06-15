@@ -94,4 +94,63 @@ RSpec.describe YayoiExportService do
       expect(rows[0][15]).to eq("0")
     end
   end
+
+  describe "税区分マッピング (適格扱い3区分への統一)" do
+    def build_entry(debit_tax:, credit_tax: "", date: Date.new(2026, 3, 1))
+      create(:journal_entry, client: client, date: date,
+             debit_account: "消耗品費", debit_tax_category: debit_tax, debit_amount: 1_000,
+             credit_account: "未払金", credit_tax_category: credit_tax, credit_amount: 1_000)
+    end
+
+    def export_row(entry)
+      decode_csv(service.export_single_entry(JournalEntry.where(id: entry.id))).first
+    end
+
+    it "「課税仕入10%（インボイス）」を「課対仕入込10%」に変換すること" do
+      entry = build_entry(debit_tax: "課税仕入10%（インボイス）")
+      expect(export_row(entry)[6]).to eq("課対仕入込10%")
+    end
+
+    it "「課税仕入10%（非インボイス）」を「課対仕入込10%」に変換すること" do
+      entry = build_entry(debit_tax: "課税仕入10%（非インボイス）")
+      expect(export_row(entry)[6]).to eq("課対仕入込10%")
+    end
+
+    it "「課税仕入10%」を「課対仕入込10%」に変換すること" do
+      entry = build_entry(debit_tax: "課税仕入10%")
+      expect(export_row(entry)[6]).to eq("課対仕入込10%")
+    end
+
+    it "「課税仕入8%（軽減・インボイス）」を「課対仕入込軽減8%」に変換すること" do
+      entry = build_entry(debit_tax: "課税仕入8%（軽減・インボイス）")
+      expect(export_row(entry)[6]).to eq("課対仕入込軽減8%")
+    end
+
+    it "「課税仕入8%（軽減・非インボイス）」を「課対仕入込軽減8%」に変換すること" do
+      entry = build_entry(debit_tax: "課税仕入8%（軽減・非インボイス）")
+      expect(export_row(entry)[6]).to eq("課対仕入込軽減8%")
+    end
+
+    it "「対象外」をそのまま「対象外」とすること" do
+      entry = build_entry(debit_tax: "対象外")
+      expect(export_row(entry)[6]).to eq("対象外")
+    end
+
+    it "「非課税仕入」を「対象外」に丸めること" do
+      entry = build_entry(debit_tax: "非課税仕入")
+      expect(export_row(entry)[6]).to eq("対象外")
+    end
+
+    it "「課対仕入（リバースチャージ）」を「対象外」に丸めること" do
+      entry = build_entry(debit_tax: "課対仕入（リバースチャージ）")
+      expect(export_row(entry)[6]).to eq("対象外")
+    end
+
+    it "空文字は空文字のまま出力されること（貸方など）" do
+      entry = build_entry(debit_tax: "課税仕入10%", credit_tax: "")
+      row = export_row(entry)
+      expect(row[6]).to eq("課対仕入込10%")
+      expect(row[13]).to eq("")
+    end
+  end
 end

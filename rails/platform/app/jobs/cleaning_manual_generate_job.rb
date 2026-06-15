@@ -1,15 +1,15 @@
 class CleaningManualGenerateJob < ApplicationJob
+  class RetryableError < StandardError; end
+
   queue_as :default
 
-  retry_on StandardError, wait: 5.seconds, attempts: 2
+  retry_on RetryableError, wait: 5.seconds, attempts: 2 do |job, exception|
+    manual_id = job.arguments.first
+    manual = CleaningManual.find_by(id: manual_id)
+    manual&.update(status: "failed", error_message: "リトライ上限到達: #{exception.message}")
+  end
 
   discard_on ActiveRecord::RecordNotFound
-
-  after_discard do |_job, exception|
-    manual_id = _job.arguments.first
-    manual = CleaningManual.find_by(id: manual_id)
-    manual&.update(status: "failed", error_message: "ジョブ実行エラー: #{exception.message}")
-  end
 
   def perform(cleaning_manual_id, labels: [])
     manual = CleaningManual.find(cleaning_manual_id)
@@ -28,6 +28,8 @@ class CleaningManualGenerateJob < ApplicationJob
 
       if result.success?
         manual.update!(manual_data: result.data, status: "draft", error_message: nil)
+      elsif result.retryable?
+        raise RetryableError, result.error
       else
         manual.update!(status: "failed", error_message: result.error)
       end

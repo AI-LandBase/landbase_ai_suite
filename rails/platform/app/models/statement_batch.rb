@@ -1,8 +1,8 @@
 class StatementBatch < ApplicationRecord
-  STATUSES = %w[processing completed failed].freeze
+  STATUSES = %w[processing completed failed duplicate].freeze
 
   belongs_to :client
-  has_many :journal_entries, dependent: :nullify
+  has_many :journal_entries, dependent: :destroy
   has_one_attached :pdf
 
   validates :source_type, presence: true, inclusion: { in: %w[amex bank invoice receipt] }
