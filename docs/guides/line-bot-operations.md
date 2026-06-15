@@ -37,24 +37,44 @@ LINE ユーザーへ結果返信
 |---|---|---|
 | `LINE_CHANNEL_SECRET` | Webhook 署名検証 | `app/controllers/line_webhook_controller.rb` |
 | `LINE_CHANNEL_TOKEN` | Messaging API (push / get_content) | `app/services/line_messaging_service.rb` |
+| `LINE_DEFAULT_CLIENT_CODE` | 友だち追加時に自動紐付ける Client コード（例: `parijona`） | `app/controllers/line_webhook_controller.rb` |
 | `ANTHROPIC_API_KEY` | Claude API（レシート画像→仕訳変換） | `app/services/receipt_processor_service.rb` |
 
 これらを変更した後は `docker compose -f compose.production.yaml --env-file .env.production up -d --force-recreate platform worker` で反映する（`restart` では再評価されない）。
 
-## Client.line_user_id 紐付けポリシー
+## LINE アカウント紐付けポリシー（LineFollower）
 
-`Client.line_user_id` は **業務上のLINEアカウント（クライアント窓口）** を紐付けることを想定している。1 Client につき 1 LINE アカウントの 1:1 関係。
+LINE user と Client の紐付けは **`line_followers` テーブル**で管理する（`Client has_many :line_followers`、1 Client : N LINE user）。`clients.line_user_id` カラムは 2026-06-01 のリファクタリングで廃止済み。
 
-LINE Webhook が未登録の `line_user_id` から来た場合、`LineWebhookController#handle_message` が「このLINEアカウントは未登録です。管理者にお問い合わせください。」と返信する。
+紐付けの流れ:
+
+1. **友だち追加（`follow` イベント）** → `LineWebhookController#handle_follow` が `ENV["LINE_DEFAULT_CLIENT_CODE"]` の Client に対し `LineFollower.find_or_create_by!(line_user_id:)` で**自動登録**（承認フローなし）。`LINE_DEFAULT_CLIENT_CODE` が未設定 or 該当 Client が無い場合は登録されず、「サービスの初期設定が完了していません。管理者にお問い合わせください。」と返信する。
+2. **レシート画像送信（`message`/image）** → `handle_message` が `LineFollower.find_by(line_user_id:)&.client` で Client を逆引きし、`ReceiptLineProcessJob` をエンキューする。
+3. 逆引きできない（未登録の）user から画像が来た場合は「このLINEアカウントは未登録です。一度ブロックを解除して友だち追加し直してください。」と返信する。
+
+### 紐付けの確認・差し替え
+
+`clients.line_user_id` は存在しないため、`Client#update!(line_user_id:)` は使えない。`LineFollower` レコードを操作する。
+
+```ruby
+# 確認
+LineFollower.find_by(line_user_id: "U...")&.client
+
+# 別 Client へ付け替え
+LineFollower.find_by(line_user_id: "U...").update!(client: Client.find_by(code: "..."))
+
+# 紐付け解除（以後その user の画像は未登録扱い）
+LineFollower.find_by(line_user_id: "U...").destroy
+```
 
 ### 現状（2026-06-01 時点）
 
-| Client | code | line_user_id | 備考 |
+| Client | code | LINE 運用 | 備考 |
 |---|---|---|---|
-| Parijona (id=1) | parijona | 開発者の個人 LINE user ID を一時的に紐付け | E2E疎通テスト用の紐付け。本番運用LINEアカウントが決まり次第差し替える |
-| AAcart (id=2) | aacart | nil | 未紐付け |
+| Parijona (id=1) | parijona | 動作確認用の暫定 LINE アカウントを `LineFollower` として登録 | 疎通テスト用。本番運用アカウントが決まり次第差し替える |
+| AAcart (id=2) | aacart | 未対応 | 必要なら別チャネルで運用 |
 
-> **メモ**: 本番運用LINEアカウントが確定したら、`Client.find(1).update!(line_user_id: "U...")` で差し替える。開発者IDを紐付けたままだと、開発者がテストで送った画像が本番Clientのデータとして保存される。
+> **メモ**: 暫定アカウントを登録したままだと、テスト送信した画像が当該 Client のデータとして保存される。本番アカウント確定後は上記の付け替え/解除で差し替えること。
 
 ## 動作確認手順
 
@@ -102,7 +122,10 @@ worker から外部 DNS が引けない。`docker compose ps` でネットワー
 
 ### 「このLINEアカウントは未登録です」と返信される
 
-`Client.line_user_id` に該当 user ID が登録されていない。`docker compose exec platform bin/rails runner "..."` で紐付ける。
+その `line_user_id` の `LineFollower` レコードが無い（＝友だち追加イベントを経ていない、または登録に失敗した）。通常は一度ブロック解除して友だち追加し直せば `handle_follow` で自動登録される。それでも登録されない場合は次を確認:
+
+- `LINE_DEFAULT_CLIENT_CODE` が本番 `.env.local` に設定され、該当 Client が存在するか（未設定だと友だち追加時に登録されない）
+- 必要なら Rails console で手動登録: `LineFollower.find_or_create_by!(line_user_id: "U...") { |f| f.client = Client.find_by(code: "parijona") }`
 
 ### ジョブが失敗キューに溜まっている
 
