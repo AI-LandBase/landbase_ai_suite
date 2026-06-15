@@ -8,8 +8,8 @@ class StatementBatchesController < ApplicationController
   end
 
   def destroy
-    @batch = StatementBatch.find(params[:id])
-    client_code = @batch.client&.code
+    client_code = params[:client_code]
+    @batch = StatementBatch.for_client(client_code).find(params[:id])
     je_count = @batch.journal_entries.count
     @batch.destroy!
     redirect_to journal_entries_path(client_code: client_code),
