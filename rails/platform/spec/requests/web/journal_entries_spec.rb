@@ -238,4 +238,42 @@ RSpec.describe "Web::JournalEntries", type: :request do
       end
     end
   end
+
+  describe "DELETE /journal_entries/:id" do
+    let!(:entry) { create(:journal_entry, client: client, debit_amount: 1000, credit_amount: 1000) }
+
+    context "未認証の場合" do
+      it "ログイン画面にリダイレクトすること" do
+        delete journal_entry_path(entry, client_code: client.code)
+        expect(response).to redirect_to(new_user_session_path)
+      end
+    end
+
+    context "認証済みの場合" do
+      before { sign_in user }
+
+      it "仕訳と関連 journal_entry_lines が削除されること" do
+        expect {
+          delete journal_entry_path(entry, client_code: client.code)
+        }.to change(JournalEntry, :count).by(-1)
+         .and change(JournalEntryLine, :count).by(-2)
+      end
+
+      it "削除後は仕訳一覧にリダイレクトすること" do
+        delete journal_entry_path(entry, client_code: client.code)
+        expect(response).to redirect_to(journal_entries_path(client_code: client.code))
+        expect(flash[:notice]).to include("削除")
+      end
+
+      it "他テナントの仕訳は削除できないこと" do
+        other_client = create(:client, code: "other_client")
+        other_entry = create(:journal_entry, client: other_client, debit_amount: 1000, credit_amount: 1000)
+
+        expect {
+          delete journal_entry_path(other_entry, client_code: client.code)
+        }.not_to change(JournalEntry, :count)
+        expect(response).to redirect_to(clients_path)
+      end
+    end
+  end
 end

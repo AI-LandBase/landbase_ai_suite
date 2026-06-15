@@ -33,6 +33,12 @@ class JournalEntriesController < ApplicationController
     end
   end
 
+  def destroy
+    @entry = JournalEntry.for_client(@client_code).find(params[:id])
+    @entry.destroy!
+    redirect_to journal_entries_path(client_code: @client_code), notice: "仕訳を削除しました"
+  end
+
   def export
     entries = JournalEntry.for_client(@client_code)
     entries = entries.by_source(params[:source_type]) if params[:source_type].present?
