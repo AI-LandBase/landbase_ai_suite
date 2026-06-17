@@ -182,9 +182,11 @@ class ReceiptProcessorService
     end
 
     Result.new(success: true, data: data, error: nil, reason: nil)
-  rescue ActiveStorage::FileNotFoundError
+  rescue ActiveStorage::FileNotFoundError => e
+    log_storage_error(e, level: :warn)
     Result.new(success: false, data: {}, error: file_not_found_message("画像ファイル"), reason: :file_not_found)
-  rescue *StorageErrorHandling::STORAGE_SYSTEM_ERRORS
+  rescue *StorageErrorHandling::STORAGE_SYSTEM_ERRORS => e
+    log_storage_error(e)
     Result.new(success: false, data: {}, error: storage_system_error_message("画像ファイル"), reason: :storage_error)
   rescue Anthropic::Errors::APIError => e
     Result.new(success: false, data: {}, error: "Anthropic API エラー: #{e.message}", reason: :api_error)

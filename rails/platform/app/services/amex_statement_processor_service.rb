@@ -176,9 +176,11 @@ class AmexStatementProcessorService
     pages = parse_pdf_pages(pdf_binary)
 
     process_with_adaptive_batch_size(pages, user_prompt)
-  rescue ActiveStorage::FileNotFoundError
+  rescue ActiveStorage::FileNotFoundError => e
+    log_storage_error(e, level: :warn)
     Result.new(success: false, data: {}, error: file_not_found_message("PDFファイル"), reason: :file_not_found)
-  rescue *StorageErrorHandling::STORAGE_SYSTEM_ERRORS
+  rescue *StorageErrorHandling::STORAGE_SYSTEM_ERRORS => e
+    log_storage_error(e)
     Result.new(success: false, data: {}, error: storage_system_error_message("PDFファイル"), reason: :storage_error)
   rescue Anthropic::Errors::APIError => e
     Result.new(success: false, data: {}, error: "Anthropic API エラー: #{e.message}", reason: :api_error)
