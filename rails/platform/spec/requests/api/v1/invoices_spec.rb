@@ -68,6 +68,20 @@ RSpec.describe "Api::V1::Invoices", type: :request do
       expect(response).to have_http_status(:not_found)
     end
 
+    context "取り込み失敗 (issue#302)" do
+      it "ingest! が IngestError を投げた場合、BaseController の rescue_from で422を返すこと" do
+        allow(StatementBatch).to receive(:ingest!).and_raise(
+          StatementBatch::IngestError.new("取り込みに失敗しました", cause_error: Errno::ENOSPC.new("No space left on device"))
+        )
+
+        post "/api/v1/invoices/process_statement", params: valid_params, headers: authorization_header
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(JSON.parse(response.body)["error"]).to include("保存に失敗")
+        expect(InvoiceProcessJob).not_to have_received(:perform_later)
+      end
+    end
+
     context "重複PDF検知" do
       it "同一PDFが処理済みの場合409を返すこと" do
         pdf_content = File.read(Rails.root.join("spec/fixtures/files/test_statement.pdf"))

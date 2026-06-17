@@ -40,9 +40,6 @@ module Api
 
         AmexStatementProcessJob.perform_later(batch.id)
         render json: { id: batch.id, status: "processing" }, status: :accepted
-      rescue StatementBatch::IngestError => e
-        Rails.logger.error("[AmexStatementsController] ingest failed: #{e.cause_error.class}: #{e.cause_error.message}")
-        render_error("ファイルの保存に失敗しました。もう一度お試しください。")
       end
 
       def status

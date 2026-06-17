@@ -163,5 +163,28 @@ RSpec.describe StatementBatch, type: :model do
         expect(batch.error_message).to include("取り込み失敗")
       end
     end
+
+    # issue#302 の核心保証: 取り込み失敗で残った failed 孤児が、再送時に dedup へ
+    # 再ヒットしてロックすることがないこと。
+    context "失敗後の再送（回帰防止）" do
+      it "failed 孤児は dedup に含まれず、同一 fingerprint の再取り込みが新しい processing バッチで成功する" do
+        # 取り込み失敗で残る failed 孤児を模す（failed になること自体は上の context で実証済み）
+        create(:statement_batch, :failed, client: client, source_type: "receipt", pdf_fingerprint: "fp_retry")
+
+        # 呼び出し側の dedup（receipt: processing/completed/duplicate）が failed 孤児にヒットしない
+        dedup_hit = described_class
+          .where(client: client, pdf_fingerprint: "fp_retry", status: %w[processing completed duplicate])
+          .exists?
+        expect(dedup_hit).to be(false)
+
+        # 再取り込みが成功し、新しい processing バッチが立つ（ロックしない）
+        batch = described_class.ingest!(
+          client: client, source_type: "receipt", fingerprint: "fp_retry", attachable: attachable
+        )
+        expect(batch).to be_persisted
+        expect(batch.status).to eq("processing")
+        expect(described_class.where(client: client, pdf_fingerprint: "fp_retry").count).to eq(2)
+      end
+    end
   end
 end

@@ -4,6 +4,12 @@ module Api
       before_action :authenticate_request!
       before_action :set_current_client
 
+      # ファイルの upload/attach 失敗（StatementBatch.ingest!）は全経路でここに集約して返す。
+      rescue_from StatementBatch::IngestError do |e|
+        Rails.logger.error("[#{controller_name}] ingest failed: #{e.cause_error.class}: #{e.cause_error.message}")
+        render_error("ファイルの保存に失敗しました。もう一度お試しください。")
+      end
+
       private
 
       def authenticate_request!
