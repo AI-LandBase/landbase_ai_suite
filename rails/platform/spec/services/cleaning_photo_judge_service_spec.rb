@@ -148,6 +148,13 @@ RSpec.describe CleaningPhotoJudgeService do
           expect(result.error).to include("読み込めませんでした")
         end
       end
+
+      it "元例外を ERROR ログに残すこと (issue#327)" do
+        allow(service).to receive(:resize_image).and_raise(Errno::ENOSPC, "No space left on device")
+        expect(Rails.logger).to receive(:error).with(/CleaningPhotoJudgeService.*Errno::ENOSPC/)
+
+        service.call
+      end
     end
   end
 end

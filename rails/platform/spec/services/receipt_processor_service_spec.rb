@@ -425,6 +425,22 @@ RSpec.describe ReceiptProcessorService do
         expect(result.error).not_to include("ActiveStorage")
         expect(result.error).to include("画像ファイルが見つかりません")
       end
+
+      it "FileNotFoundError は元例外を WARN ログに残すこと (issue#327)" do
+        broken_image = double("BrokenAttachment")
+        allow(broken_image).to receive(:download).and_raise(ActiveStorage::FileNotFoundError)
+        expect(Rails.logger).to receive(:warn).with(/ReceiptProcessorService.*ActiveStorage::FileNotFoundError/)
+
+        described_class.new(image: broken_image, client_code: client.code).call
+      end
+
+      it "システムエラーは元例外を ERROR ログに残すこと (issue#327)" do
+        broken_image = double("BrokenAttachment")
+        allow(broken_image).to receive(:download).and_raise(Errno::ENOSPC, "No space left on device")
+        expect(Rails.logger).to receive(:error).with(/ReceiptProcessorService.*Errno::ENOSPC/)
+
+        described_class.new(image: broken_image, client_code: client.code).call
+      end
     end
   end
 end

@@ -30,4 +30,12 @@ module StorageErrorHandling
   def storage_system_error_message(kind)
     "#{kind}をサーバー側で読み込めませんでした。時間をおいて再度お試しください。"
   end
+
+  # ユーザーにはクラス名を漏らさない一方、運用トリアージのため元例外を記録する (issue#327)。
+  # ディスクフル/権限なのか単なるファイル不在なのかを切り分けられるよう、クラス名と message を残す。
+  # level は呼び出し側で使い分ける: システムコール系(EACCES/ENOSPC 等)= :error、
+  # ファイル不在(FileNotFoundError) = :warn。
+  def log_storage_error(error, level: :error)
+    Rails.logger.public_send(level, "[#{self.class.name}] storage error: #{error.class}: #{error.message}")
+  end
 end
