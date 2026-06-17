@@ -10,6 +10,10 @@ module StorageErrorHandling
   # (File.binread / vips の tempfile 経路) では ENOENT/EIO が直接上がるため含める。
   # 注意: 一律 SystemCallError で握ると EAGAIN/EINTR 等の一時的エラーまで非リトライ化して
   # しまうため、非リトライが妥当なものだけを明示列挙する。
+  #
+  # このリストは「何をインフラ障害(非リトライ)とみなすか」のポリシー定義であり、追加は運用方針の
+  # 変更にあたる。将来ストレージ実装を変える場合（例: Disk service → S3）、Aws::S3 系の例外を
+  # ここに足すかは、リトライ可否・誤検知の影響を運用と合意の上で判断する。
   STORAGE_SYSTEM_ERRORS = [
     Errno::EACCES,  # 権限なし
     Errno::ENOSPC,  # ディスクフル
@@ -31,10 +35,13 @@ module StorageErrorHandling
     "#{kind}をサーバー側で読み込めませんでした。時間をおいて再度お試しください。"
   end
 
-  # ユーザーにはクラス名を漏らさない一方、運用トリアージのため元例外を記録する (issue#327)。
-  # ディスクフル/権限なのか単なるファイル不在なのかを切り分けられるよう、クラス名と message を残す。
+  # 運用/SRE 向けのログ（ユーザー向け文言は *_message 側）。クラス名を漏らさない一方で、
+  # トリアージのため元例外を記録する (issue#327)。ディスクフル/権限なのか単なるファイル不在
+  # なのかを切り分けられるよう、クラス名と message を残す。
   # level は呼び出し側で使い分ける: システムコール系(EACCES/ENOSPC 等)= :error、
   # ファイル不在(FileNotFoundError) = :warn。
+  # 規約: storage 系の rescue を追加する際は、文言を返す前に必ず本メソッドを呼ぶ（呼び漏れると
+  # その経路だけログが落ちる）。
   def log_storage_error(error, level: :error)
     Rails.logger.public_send(level, "[#{self.class.name}] storage error: #{error.class}: #{error.message}")
   end
