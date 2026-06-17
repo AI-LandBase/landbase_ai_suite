@@ -193,6 +193,35 @@ RSpec.describe ReceiptLineProcessJob, type: :job do
       end
     end
 
+    context "取り込み失敗 (issue#302)" do
+      # 取り込みの堅牢化（孤児を残さない等）は StatementBatch.ingest! 側で検証する。
+      # ここでは ingest! が IngestError を投げた時のジョブの振る舞いだけを見る。
+      before do
+        allow(ReceiptProcessorService).to receive(:new)
+        allow(StatementBatch).to receive(:ingest!).and_raise(
+          StatementBatch::IngestError.new(
+            "取り込みに失敗しました",
+            cause_error: Errno::ENOSPC.new("No space left on device")
+          )
+        )
+      end
+
+      it "保存失敗メッセージをLINEで送信すること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          "画像の保存に失敗しました。もう一度お試しください。"
+        )
+      end
+
+      it "処理に進まないこと（ReceiptProcessorService を呼ばない）" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(ReceiptProcessorService).not_to have_received(:new)
+      end
+    end
+
     context "重複画像" do
       before do
         create(:statement_batch, :completed, client: client, source_type: "receipt", pdf_fingerprint: fingerprint)

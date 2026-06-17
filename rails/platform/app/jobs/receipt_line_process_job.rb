@@ -41,17 +41,26 @@ class ReceiptLineProcessJob < ApplicationJob
       return
     end
 
-    batch = client.statement_batches.create!(
-      source_type: "receipt",
-      status: "processing",
-      pdf_fingerprint: fingerprint
-    )
-
-    batch.pdf.attach(
-      io: StringIO.new(image_binary),
-      filename: "receipt_#{message_id}.jpg",
-      content_type: detect_content_type(image_binary)
-    )
+    # 取り込みは共有ヘルパに委譲する。upload は after_commit で走るため、失敗時は
+    # コミット済みの processing 孤児が残りうる。ヘルパが孤児を failed 化して IngestError を
+    # 投げるので、ここでは LINE 通知して終了する (issue#302)。
+    batch =
+      begin
+        StatementBatch.ingest!(
+          client: client,
+          source_type: "receipt",
+          fingerprint: fingerprint,
+          attachable: {
+            io: StringIO.new(image_binary),
+            filename: "receipt_#{message_id}.jpg",
+            content_type: detect_content_type(image_binary)
+          }
+        )
+      rescue StatementBatch::IngestError => e
+        Rails.logger.error("[ReceiptLineProcessJob] ingest failed: #{e.cause_error.class}: #{e.cause_error.message}")
+        @line_service.push(line_user_id, "画像の保存に失敗しました。もう一度お試しください。")
+        return
+      end
 
     @line_service.push(line_user_id, "領収書を受け付けました。処理中です...")
 

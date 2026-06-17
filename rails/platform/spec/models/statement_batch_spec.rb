@@ -105,4 +105,86 @@ RSpec.describe StatementBatch, type: :model do
       expect(described_class.for_client("client_b").count).to eq(1)
     end
   end
+
+  describe ".ingest! (issue#302)" do
+    let(:client) { create(:client) }
+    let(:attachable) do
+      { io: StringIO.new("\xFF\xD8\xFFreceipt_image".b), filename: "r.jpg", content_type: "image/jpeg" }
+    end
+
+    context "成功時" do
+      it "永続化済みの processing バッチを返し、pdf が添付される" do
+        batch = described_class.ingest!(
+          client: client, source_type: "receipt", fingerprint: "fp_ok", attachable: attachable
+        )
+
+        expect(batch).to be_persisted
+        expect(batch.status).to eq("processing")
+        expect(batch.source_type).to eq("receipt")
+        expect(batch.pdf_fingerprint).to eq("fp_ok")
+        expect(batch.pdf).to be_attached
+      end
+    end
+
+    # ActiveStorage は実 upload を after_commit で行うため、upload 失敗時には
+    # batch 行が先に processing でコミットされる。その孤児を残さないことを検証する。
+    context "after_commit の upload が失敗する時" do
+      before do
+        allow_any_instance_of(ActiveStorage::Blob)
+          .to receive(:upload_without_unfurling).and_raise(Errno::ENOSPC, "No space left on device")
+      end
+
+      it "IngestError を raise し、元例外を cause_error に保持する" do
+        expect {
+          described_class.ingest!(client: client, source_type: "receipt", fingerprint: "fp_ng", attachable: attachable)
+        }.to raise_error(StatementBatch::IngestError) { |e| expect(e.cause_error).to be_a(Errno::ENOSPC) }
+      end
+
+      it "processing のままロックされる孤児バッチを残さない" do
+        expect {
+          begin
+            described_class.ingest!(client: client, source_type: "receipt", fingerprint: "fp_ng", attachable: attachable)
+          rescue StatementBatch::IngestError
+            nil
+          end
+        }.not_to change { described_class.where(status: "processing").count }
+      end
+
+      it "コミット済みのバッチを failed に確定する（dedup から外れ再送ロックしない）" do
+        begin
+          described_class.ingest!(client: client, source_type: "receipt", fingerprint: "fp_ng", attachable: attachable)
+        rescue StatementBatch::IngestError
+          nil
+        end
+
+        batch = described_class.where(client: client, pdf_fingerprint: "fp_ng").first
+        expect(batch).to be_present
+        expect(batch.status).to eq("failed")
+        expect(batch.error_message).to include("取り込み失敗")
+      end
+    end
+
+    # issue#302 の核心保証: 取り込み失敗で残った failed 孤児が、再送時に dedup へ
+    # 再ヒットしてロックすることがないこと。
+    context "失敗後の再送（回帰防止）" do
+      it "failed 孤児は dedup に含まれず、同一 fingerprint の再取り込みが新しい processing バッチで成功する" do
+        # 取り込み失敗で残る failed 孤児を模す（failed になること自体は上の context で実証済み）
+        create(:statement_batch, :failed, client: client, source_type: "receipt", pdf_fingerprint: "fp_retry")
+
+        # 呼び出し側の dedup（receipt: processing/completed/duplicate）が failed 孤児にヒットしない
+        dedup_hit = described_class
+          .where(client: client, pdf_fingerprint: "fp_retry", status: %w[processing completed duplicate])
+          .exists?
+        expect(dedup_hit).to be(false)
+
+        # 再取り込みが成功し、新しい processing バッチが立つ（ロックしない）
+        batch = described_class.ingest!(
+          client: client, source_type: "receipt", fingerprint: "fp_retry", attachable: attachable
+        )
+        expect(batch).to be_persisted
+        expect(batch.status).to eq("processing")
+        expect(described_class.where(client: client, pdf_fingerprint: "fp_retry").count).to eq(2)
+      end
+    end
+  end
 end

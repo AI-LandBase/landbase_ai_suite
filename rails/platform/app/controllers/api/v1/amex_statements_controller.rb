@@ -31,20 +31,15 @@ module Api
           end
         end
 
-        batch = @current_client.statement_batches.new(
+        batch = StatementBatch.ingest!(
+          client: @current_client,
           source_type: "amex",
-          status: "processing",
-          pdf_fingerprint: fingerprint
+          fingerprint: fingerprint,
+          attachable: pdf
         )
 
-        batch.pdf.attach(pdf)
-
-        if batch.save
-          AmexStatementProcessJob.perform_later(batch.id)
-          render json: { id: batch.id, status: "processing" }, status: :accepted
-        else
-          render_error(batch.errors.full_messages.join(", "))
-        end
+        AmexStatementProcessJob.perform_later(batch.id)
+        render json: { id: batch.id, status: "processing" }, status: :accepted
       end
 
       def status
