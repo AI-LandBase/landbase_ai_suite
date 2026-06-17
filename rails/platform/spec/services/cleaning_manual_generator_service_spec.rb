@@ -85,6 +85,23 @@ RSpec.describe CleaningManualGeneratorService do
       expect(result.success?).to be true
     end
 
+    it "画像読み取りのシステムエラー(EACCES等)は storage_error で非リトライ、クラス名を漏らさないこと (issue#299)" do
+      service = described_class.new(
+        images: [image_file],
+        property_name: "テスト施設",
+        room_type: "スタンダード"
+      )
+      allow(service).to receive(:resize_image).and_raise(Errno::EACCES, "Permission denied")
+
+      result = service.call
+
+      expect(result.success?).to be false
+      expect(result.reason).to eq(:storage_error)
+      expect(result.retryable?).to be false
+      expect(result.error).not_to include("Errno")
+      expect(result.error).to include("読み込めませんでした")
+    end
+
     context "JSONがコードブロックで囲まれている場合" do
       let(:mock_response) do
         double("Response",

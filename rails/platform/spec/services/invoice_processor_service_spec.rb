@@ -520,6 +520,36 @@ RSpec.describe InvoiceProcessorService do
         result = described_class::Result.new(success: true, data: {}, error: nil, reason: nil)
         expect(result.retryable?).to be false
       end
+
+      it "storage_errorはretryableでないこと" do
+        result = described_class::Result.new(success: false, data: {}, error: "error", reason: :storage_error)
+        expect(result.retryable?).to be false
+      end
+    end
+
+    context "ストレージ系エラー (issue#299)" do
+      it "EACCES等のシステムエラーは storage_error で非リトライ、クラス名を漏らさないこと" do
+        broken_pdf = double("BrokenAttachment")
+        allow(broken_pdf).to receive(:download).and_raise(Errno::EACCES, "Permission denied")
+
+        result = described_class.new(pdf: broken_pdf, client_code: client.code).call
+
+        expect(result.success?).to be false
+        expect(result.reason).to eq(:storage_error)
+        expect(result.retryable?).to be false
+        expect(result.error).not_to include("Errno")
+        expect(result.error).to include("読み込めませんでした")
+      end
+
+      it "ENOENT(ファイル不在)も storage_error として非リトライで扱うこと" do
+        broken_pdf = double("BrokenAttachment")
+        allow(broken_pdf).to receive(:download).and_raise(Errno::ENOENT, "No such file or directory")
+
+        result = described_class.new(pdf: broken_pdf, client_code: client.code).call
+
+        expect(result.reason).to eq(:storage_error)
+        expect(result.retryable?).to be false
+      end
     end
   end
 end

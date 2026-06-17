@@ -1,7 +1,9 @@
 require "image_processing/vips"
 
 class CleaningManualGeneratorService
-  NON_RETRYABLE_REASONS = %i[config_error file_not_found].freeze
+  include StorageErrorHandling
+
+  NON_RETRYABLE_REASONS = %i[config_error file_not_found storage_error].freeze
 
   Result = Data.define(:success, :data, :error, :reason) do
     alias_method :success?, :success
@@ -87,8 +89,10 @@ class CleaningManualGeneratorService
       return merged unless merged.success?
       Result.new(success: true, data: merged.data, error: nil, reason: nil)
     end
-  rescue ActiveStorage::FileNotFoundError => e
-    Result.new(success: false, data: {}, error: "画像ファイルが見つかりません: #{e.message}", reason: :file_not_found)
+  rescue ActiveStorage::FileNotFoundError
+    Result.new(success: false, data: {}, error: file_not_found_message("画像ファイル"), reason: :file_not_found)
+  rescue *StorageErrorHandling::STORAGE_SYSTEM_ERRORS
+    Result.new(success: false, data: {}, error: storage_system_error_message("画像ファイル"), reason: :storage_error)
   rescue Anthropic::Errors::APIError => e
     Result.new(success: false, data: {}, error: "Anthropic API エラー: #{e.message}", reason: :api_error)
   rescue JSON::ParserError => e
