@@ -100,6 +100,8 @@ class ReceiptLineProcessJob < ApplicationJob
         "領収書またはレシートの画像を送信してください。"
       when :file_not_found
         "画像ファイルの読み込みに失敗しました。もう一度送信してください。"
+      when :storage_error
+        "サーバー側で画像を読み込めませんでした。時間をおいて再度お試しください。"
       else
         "処理中にエラーが発生しました。もう一度お試しください。"
       end

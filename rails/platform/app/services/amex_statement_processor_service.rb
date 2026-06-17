@@ -1,7 +1,9 @@
 require "combine_pdf"
 
 class AmexStatementProcessorService
-  NON_RETRYABLE_REASONS = %i[config_error file_not_found].freeze
+  include StorageErrorHandling
+
+  NON_RETRYABLE_REASONS = %i[config_error file_not_found storage_error].freeze
 
   Result = Data.define(:success, :data, :error, :reason) do
     alias_method :success?, :success
@@ -174,8 +176,10 @@ class AmexStatementProcessorService
     pages = parse_pdf_pages(pdf_binary)
 
     process_with_adaptive_batch_size(pages, user_prompt)
-  rescue ActiveStorage::FileNotFoundError => e
-    Result.new(success: false, data: {}, error: "PDFファイルが見つかりません: #{e.message}", reason: :file_not_found)
+  rescue ActiveStorage::FileNotFoundError
+    Result.new(success: false, data: {}, error: file_not_found_message("PDFファイル"), reason: :file_not_found)
+  rescue *StorageErrorHandling::STORAGE_SYSTEM_ERRORS
+    Result.new(success: false, data: {}, error: storage_system_error_message("PDFファイル"), reason: :storage_error)
   rescue Anthropic::Errors::APIError => e
     Result.new(success: false, data: {}, error: "Anthropic API エラー: #{e.message}", reason: :api_error)
   rescue JSON::ParserError => e

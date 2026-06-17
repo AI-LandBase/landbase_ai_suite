@@ -400,5 +400,31 @@ RSpec.describe ReceiptProcessorService do
         expect(result.retryable?).to be false
       end
     end
+
+    context "ストレージ系エラー (issue#299)" do
+      it "EACCES等のシステムエラーは storage_error で非リトライ、クラス名を漏らさないこと" do
+        broken_image = double("BrokenAttachment")
+        allow(broken_image).to receive(:download).and_raise(Errno::EACCES, "Permission denied")
+
+        result = described_class.new(image: broken_image, client_code: client.code).call
+
+        expect(result.success?).to be false
+        expect(result.reason).to eq(:storage_error)
+        expect(result.retryable?).to be false
+        expect(result.error).not_to include("Errno")
+        expect(result.error).to include("読み込めませんでした")
+      end
+
+      it "FileNotFoundError のメッセージが空でもクラス名を漏らさないこと" do
+        broken_image = double("BrokenAttachment")
+        allow(broken_image).to receive(:download).and_raise(ActiveStorage::FileNotFoundError)
+
+        result = described_class.new(image: broken_image, client_code: client.code).call
+
+        expect(result.reason).to eq(:file_not_found)
+        expect(result.error).not_to include("ActiveStorage")
+        expect(result.error).to include("画像ファイルが見つかりません")
+      end
+    end
   end
 end

@@ -293,6 +293,38 @@ RSpec.describe ReceiptLineProcessJob, type: :job do
       end
     end
 
+    context "storage_error (issue#299)" do
+      let(:storage_error_result) do
+        ReceiptProcessorService::Result.new(
+          success: false, data: {}, error: "画像ファイルをサーバー側で読み込めませんでした。時間をおいて再度お試しください。", reason: :storage_error
+        )
+      end
+
+      before do
+        allow(ReceiptProcessorService).to receive(:new).and_return(
+          instance_double(ReceiptProcessorService, call: storage_error_result)
+        )
+      end
+
+      it "ストレージ専用メッセージをLINEで送信すること" do
+        described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+
+        expect(line_service).to have_received(:push).with(
+          line_user_id,
+          "サーバー側で画像を読み込めませんでした。時間をおいて再度お試しください。"
+        )
+      end
+
+      it "リトライせずStatementBatchをfailedにすること" do
+        expect {
+          described_class.new.perform(client_id: client.id, message_id: message_id, line_user_id: line_user_id)
+        }.not_to raise_error
+
+        batch = StatementBatch.last
+        expect(batch.status).to eq("failed")
+      end
+    end
+
     context "非領収書画像" do
       let(:non_receipt_result) do
         ReceiptProcessorService::Result.new(
