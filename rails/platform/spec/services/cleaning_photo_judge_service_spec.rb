@@ -130,5 +130,24 @@ RSpec.describe CleaningPhotoJudgeService do
         expect(result.error).to include("パースエラー")
       end
     end
+
+    context "画像読み取りのストレージ系エラー (issue#325)" do
+      let(:mock_response) { nil }
+
+      # STORAGE_SYSTEM_ERRORS の全メンバーを一律にマスクすることを検証する。
+      # リストに Errno を追加した場合も自動でカバーされる。
+      StorageErrorHandling::STORAGE_SYSTEM_ERRORS.each do |error_class|
+        it "#{error_class} は失敗として返し、クラス名を漏らさないこと" do
+          allow(service).to receive(:resize_image).and_raise(error_class)
+
+          result = service.call
+
+          expect(result.success?).to be false
+          expect(result.error).not_to include("Errno")
+          expect(result.error).not_to include(error_class.name)
+          expect(result.error).to include("読み込めませんでした")
+        end
+      end
+    end
   end
 end
