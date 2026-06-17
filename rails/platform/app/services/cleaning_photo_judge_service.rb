@@ -1,6 +1,8 @@
 require "image_processing/vips"
 
 class CleaningPhotoJudgeService
+  include StorageErrorHandling
+
   Result = Data.define(:success, :result, :feedback, :error) do
     alias_method :success?, :success
   end
@@ -67,6 +69,10 @@ class CleaningPhotoJudgeService
     Result.new(success: false, result: nil, feedback: nil, error: "Anthropic API エラー: #{e.message}")
   rescue JSON::ParserError => e
     Result.new(success: false, result: nil, feedback: nil, error: "JSON パースエラー: #{e.message}")
+  rescue *StorageErrorHandling::STORAGE_SYSTEM_ERRORS
+    # 写真の読み取り(File.binread / vips の tempfile 経路)で起きるストレージ系エラーは
+    # IOError ではないため従来は素通りしていた。クラス名を漏らさず失敗として返す (issue#325)。
+    Result.new(success: false, result: nil, feedback: nil, error: storage_system_error_message("画像"))
   rescue IOError, Vips::Error => e
     Result.new(success: false, result: nil, feedback: nil, error: "画像処理エラー: #{e.message}")
   end

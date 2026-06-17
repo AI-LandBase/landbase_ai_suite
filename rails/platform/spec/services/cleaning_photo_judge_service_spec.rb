@@ -130,5 +130,28 @@ RSpec.describe CleaningPhotoJudgeService do
         expect(result.error).to include("パースエラー")
       end
     end
+
+    context "画像読み取りのストレージ系エラー (issue#325)" do
+      let(:mock_response) { nil }
+
+      it "EACCES等のシステムエラーは失敗として返し、クラス名を漏らさないこと" do
+        allow(service).to receive(:resize_image).and_raise(Errno::EACCES, "Permission denied")
+
+        result = service.call
+
+        expect(result.success?).to be false
+        expect(result.error).not_to include("Errno")
+        expect(result.error).to include("読み込めませんでした")
+      end
+
+      it "ENOENT(ファイル不在)も失敗として返すこと" do
+        allow(service).to receive(:resize_image).and_raise(Errno::ENOENT, "No such file or directory")
+
+        result = service.call
+
+        expect(result.success?).to be false
+        expect(result.error).not_to include("Errno")
+      end
+    end
   end
 end
