@@ -540,6 +540,16 @@ RSpec.describe InvoiceProcessorService do
         expect(result.error).not_to include("Errno")
         expect(result.error).to include("読み込めませんでした")
       end
+
+      it "ENOENT(ファイル不在)も storage_error として非リトライで扱うこと" do
+        broken_pdf = double("BrokenAttachment")
+        allow(broken_pdf).to receive(:download).and_raise(Errno::ENOENT, "No such file or directory")
+
+        result = described_class.new(pdf: broken_pdf, client_code: client.code).call
+
+        expect(result.reason).to eq(:storage_error)
+        expect(result.retryable?).to be false
+      end
     end
   end
 end
