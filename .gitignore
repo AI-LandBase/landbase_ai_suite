@@ -23,6 +23,10 @@
 tmp/
 temp/
 
+# Production storage (compose.production.yaml が ./storage を bind mount する。
+# クライアントの PDF/画像が乗るため、誤って git add しないよう丸ごと無視する)
+/storage/
+
 # Node modules and build artifacts
 node_modules/
 /rails/*/app/assets/builds/*
