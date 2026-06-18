@@ -85,6 +85,8 @@ COPY --from=production-builder /platform /platform
 # --system のみだと Debian は system UID を降順に自動採番するため、base image の
 # 変更で 998 等にずれ得る。本番ホスト側 ./storage を 999:999 で chown している前提が
 # 崩れると全アップロードが EACCES で失敗するため、明示的に 999 へ固定する。
+# この 999 は Makefile の prod-storage-check が強制するホスト側 ./storage の
+# 所有者(999:999)と対。どちらかを変える時は必ず両方を揃えること。
 #
 # storage への chown は本番では ./storage の bind mount で上書きされ実質 no-op になる。
 # 本番ではホスト側で `chown -R 999:999 ./storage` を実行しておくこと（issue#300）。
