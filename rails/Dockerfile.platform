@@ -81,9 +81,16 @@ FROM base AS production
 COPY --from=production-builder /usr/local/bundle /usr/local/bundle
 COPY --from=production-builder /platform /platform
 
-# 非 root ユーザーを作成
-RUN groupadd --system rails \
-    && useradd --system --gid rails --create-home --shell /bin/bash rails \
+# 非 root ユーザーを作成（UID/GID を 999 に固定）
+# --system のみだと Debian は system UID を降順に自動採番するため、base image の
+# 変更で 998 等にずれ得る。本番ホスト側 ./storage を 999:999 で chown している前提が
+# 崩れると全アップロードが EACCES で失敗するため、明示的に 999 へ固定する。
+#
+# storage への chown は本番では ./storage の bind mount で上書きされ実質 no-op になる。
+# 本番ではホスト側で `chown -R 999:999 ./storage` を実行しておくこと（issue#300）。
+# ここでの chown は bind mount を使わない実行（COPY されたディレクトリ）向けに残す。
+RUN groupadd --system --gid 999 rails \
+    && useradd --system --uid 999 --gid 999 --create-home --shell /bin/bash rails \
     && chown -R rails:rails db log storage tmp
 USER rails
 
