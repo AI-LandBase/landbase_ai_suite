@@ -66,8 +66,40 @@ services:
     depends_on:
       db-suite:
         condition: service_healthy
+    # worker が platform の db:prepare 完了後に起動できるよう healthcheck を持たせる。
+    # /up が応答する = bin/setup(db:prepare) 完了後に server が立った状態。
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/up || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
     stdin_open: true
     tty: true
+
+  # 本番(compose.production.yaml)相当の solid_queue worker を別コンテナで起動する。
+  # platform と同じ ./rails/platform をマウントすることで storage(/platform/storage)を
+  # 共有し、worker からの storage 読み取り回帰を dev でも検出できる (issue#300 課題3)。
+  worker:
+    build:
+      context: ./rails
+      dockerfile: Dockerfile.platform
+      target: development
+      args:
+        RUBY_VERSION: ${RUBY_VERSION}
+        RAILS_VERSION: ${RAILS_VERSION}
+    # DB準備は platform(bin/setup の db:prepare)に一任し、worker は solid_queue 起動のみ。
+    # platform が healthy になってから起動するため queue DB は準備済み（db:prepare の競合回避）。
+    command: bash -c "bin/rails solid_queue:start"
+    volumes:
+      - ./rails/platform:/platform
+      - platform_bundle_cache:/usr/local/bundle
+    env_file:
+      - .env.development
+      - .env.local
+    depends_on:
+      platform:
+        condition: service_healthy
 
 volumes:
   postgres_data:

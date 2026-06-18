@@ -55,6 +55,12 @@ Rails.application.configure do
   # Highlight code that enqueued background job in logs.
   config.active_job.verbose_enqueue_logs = true
 
+  # 本番(production.rb)と同じく solid_queue を使い、別 worker コンテナでジョブを実行する。
+  # これにより platform/worker 間の storage(/platform/storage) 共有の回帰を dev でも検出できる。
+  # queue は専用DB(platform_development_queue)へ。compose の worker サービスと対 (issue#300)。
+  config.active_job.queue_adapter = :solid_queue
+  config.solid_queue.connects_to = { database: { writing: :queue } }
+
   # Raises error for missing translations.
   # config.i18n.raise_on_missing_translations = true
 
