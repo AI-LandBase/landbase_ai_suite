@@ -36,7 +36,9 @@ services:
       db-suite:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/up || exit 1"]
+      # /up(boot確認)ではなく storage 書き込み可否まで見る /health/storage を叩く。
+      # storage 破損(権限/マウント消失/RO/ディスクフル/I-O)時に unhealthy になる (issue#330)。
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health/storage || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -58,9 +60,10 @@ services:
       platform:
         condition: service_healthy
     healthcheck:
-      # storage マウントが破損（権限変更・RO化）すると docker compose ps では
-      # running 表示のまま見逃すため、書き込み可否を直接確認する
-      test: ["CMD-SHELL", "test -w /platform/storage || exit 1"]
+      # storage マウント破損(権限変更/マウント消失/RO化)に加え、実書き込みするため
+      # ディスクフル/I-Oエラーも検知する。test -w はパーミッションしか見ず取りこぼす (issue#331)。
+      # platform(.healthcheck.platform)とファイル名を分け書き込み/削除の競合による誤検知を避ける。
+      test: ["CMD-SHELL", "touch /platform/storage/.healthcheck.worker && rm -f /platform/storage/.healthcheck.worker || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
