@@ -20,36 +20,24 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
 
+# 本番(production)と同型の multi-database 構成。solid_queue を別 worker コンテナで
+# 動かすため、queue を専用DB(platform_development_queue)に分離する。
+# cache/cable は dev では分離不要(:memory_store / デフォルト)のため primary のみ追加。
+#
+# host 等を primary に明示し queue へ継承させる。DATABASE_URL は primary にしか
+# 適用されないため、queue を *default(host無し)にするとソケット接続で失敗する。
 development:
-  <<: *default
-  database: platform_development
-
-  # The specified database role being used to connect to PostgreSQL.
-  # To create additional roles in PostgreSQL see `$ createuser --help`.
-  # When left blank, PostgreSQL will use the default role. This is
-  # the same name as the operating system user running Rails.
-  #username: platform
-
-  # The password associated with the PostgreSQL role (username).
-  #password:
-
-  # Connect on a TCP socket. Omitted by default since the client uses a
-  # domain socket that doesn't need configuration. Windows does not have
-  # domain sockets, so uncomment these lines.
-  #host: localhost
-
-  # The TCP port the server listens on. Defaults to 5432.
-  # If your server runs on a different port number, change accordingly.
-  #port: 5432
-
-  # Schema search path. The server defaults to $user,public
-  #schema_search_path: myapp,sharedapp,public
-
-  # Minimum log levels, in increasing order:
-  #   debug5, debug4, debug3, debug2, debug1,
-  #   log, notice, warning, error, fatal, and panic
-  # Defaults to warning.
-  #min_messages: notice
+  primary: &primary_development
+    <<: *default
+    host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
+    port: <%= ENV.fetch("POSTGRES_PORT", 5432) %>
+    database: platform_development
+    username: <%= ENV.fetch("POSTGRES_USER", "platform") %>
+    password: <%= ENV["POSTGRES_PASSWORD"] %>
+  queue:
+    <<: *primary_development
+    database: platform_development_queue
+    migrations_paths: db/queue_migrate
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
