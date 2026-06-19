@@ -22,5 +22,17 @@ RSpec.describe "Health", type: :request do
 
       expect(response).to have_http_status(:service_unavailable)
     end
+
+    it "後始末の削除が失敗（連続実行で既に削除済み等）でも 200 を返す" do
+      root = ActiveStorage::Blob.service.try(:root) || Rails.root.join("storage")
+      path = File.join(root, ".healthcheck.platform")
+      allow(File).to receive(:delete).with(path).and_raise(Errno::ENOENT)
+
+      get "/health/storage"
+
+      expect(response).to have_http_status(:ok)
+    ensure
+      FileUtils.rm_f(path)
+    end
   end
 end
