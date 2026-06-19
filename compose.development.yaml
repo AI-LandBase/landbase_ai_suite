@@ -100,6 +100,15 @@ services:
     depends_on:
       platform:
         condition: service_healthy
+    # 本番(compose.production.yaml)の worker 同様、storage マウントが破損（権限変更・RO化）
+    # しても docker compose ps では running 表示のまま見逃すため、書き込み可否を直接確認する。
+    # storage 共有の回帰を dev でも検出するという issue#300 課題3 の狙いと対。
+    healthcheck:
+      test: ["CMD-SHELL", "test -w /platform/storage || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   postgres_data:
