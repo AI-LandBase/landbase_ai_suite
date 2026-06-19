@@ -501,9 +501,10 @@ RSpec.describe AmexStatementProcessorService do
 
     context "ActiveStorage::FileNotFoundError が発生した場合" do
       it "file_not_found reasonで失敗し、retryableでないこと" do
+        # download を直接 stub することで read_pdf_binary の respond_to?(:download) は
+        # RSpec double のネイティブ挙動で true を返す。respond_to? 自体は stub しない
+        # (将来分岐が増えても未知の引数で MockExpectationError にならない / issue#303)。
         broken_pdf = double("BrokenAttachment")
-        allow(broken_pdf).to receive(:respond_to?).with(:download).and_return(true)
-        allow(broken_pdf).to receive(:respond_to?).with(:read).and_return(false)
         allow(broken_pdf).to receive(:download).and_raise(
           ActiveStorage::FileNotFoundError, "missing file"
         )
