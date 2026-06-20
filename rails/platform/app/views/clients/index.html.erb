@@ -27,7 +27,7 @@
         <tr class="hover:bg-gray-800 cursor-pointer" onclick="window.location='<%= client_path(client) %>'">
           <td class="px-6 py-4 text-sm font-mono text-gray-100"><%= client.code %></td>
           <td class="px-6 py-4 text-sm font-medium text-gray-100"><%= client.name %></td>
-          <td class="px-6 py-4 text-sm text-gray-400"><%= client.industry.presence || "—" %></td>
+          <td class="px-6 py-4 text-sm text-gray-400"><%= client.industry_codes.map { |c| Client::INDUSTRY_LABELS[c] }.compact.join(" / ").presence || "—" %></td>
           <td class="px-6 py-4">
             <% if client.status == "active" %>
               <%= render "shared/badge", label: client.status_label, variant: :success %>

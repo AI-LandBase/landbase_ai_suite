@@ -44,11 +44,11 @@ class ClientsController < ApplicationController
   private
 
   def create_params
-    params.require(:client).permit(:code, :name, :industry, :status)
+    params.require(:client).permit(:code, :name, :industry, :status, industries: [])
   end
 
   def update_params
-    params.require(:client).permit(:name, :industry, :status)
+    params.require(:client).permit(:name, :industry, :status, industries: [])
   end
 
   def record_not_found

@@ -8,6 +8,7 @@ FactoryBot.define do
 
     trait :hotel do
       industry { "hotel" }
+      industries { %w[hotel] }
     end
 
     trait :inactive do

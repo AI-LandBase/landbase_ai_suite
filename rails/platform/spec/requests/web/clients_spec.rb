@@ -133,14 +133,20 @@ RSpec.describe "Web::Clients", type: :request do
 
       it "正常なパラメータで作成できること" do
         expect {
-          post clients_path, params: { client: { code: "new_client", name: "新規社", industry: "hotel", status: "active" } }
+          post clients_path, params: { client: { code: "new_client", name: "新規社", industries: %w[hotel], status: "active" } }
         }.to change(Client, :count).by(1)
 
         client = Client.find_by(code: "new_client")
         expect(response).to redirect_to(client_path(client))
         expect(client.name).to eq("新規社")
-        expect(client.industry).to eq("hotel")
+        expect(client.industries).to eq(%w[hotel])
         expect(client.status).to eq("active")
+      end
+
+      it "複数業種を同時に作成できること" do
+        post clients_path, params: { client: { code: "multi_ind", name: "複合社", industries: %w[hotel restaurant], status: "active" } }
+        client = Client.find_by(code: "multi_ind")
+        expect(client.industries).to contain_exactly("hotel", "restaurant")
       end
 
       it "バリデーションエラー時にフォームが再表示されること" do
@@ -202,11 +208,17 @@ RSpec.describe "Web::Clients", type: :request do
       before { sign_in user }
 
       it "正常に更新できること" do
-        patch client_path(client), params: { client: { name: "更新後社", industry: "tour" } }
+        patch client_path(client), params: { client: { name: "更新後社", industries: %w[tour] } }
         expect(response).to redirect_to(client_path(client))
         client.reload
         expect(client.name).to eq("更新後社")
-        expect(client.industry).to eq("tour")
+        expect(client.industries).to eq(%w[tour])
+      end
+
+      it "複数業種に更新できること" do
+        patch client_path(client), params: { client: { industries: %w[hotel tour] } }
+        client.reload
+        expect(client.industries).to contain_exactly("hotel", "tour")
       end
 
       it "codeが変更されないこと" do
