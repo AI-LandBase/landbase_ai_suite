@@ -53,6 +53,9 @@ class JournalEntry < ApplicationRecord
 
   # 編集履歴の差分計算・表示に使うフラットなスナップショット。
   # 会計記録として読みやすいよう日本語ラベルをキーにする。
+  # NOTE: 複数行の借方/貸方は journal_entry_lines の order(:id) 順を前提に
+  # "借方N_..." のキーを採番する。将来ライン順序の並べ替え機能を入れる場合は
+  # position 等の明示的な順序カラムへ切り替えること（キーがズレて diff が崩れるため）。
   def revision_snapshot
     snapshot = {
       "摘要" => description.to_s,

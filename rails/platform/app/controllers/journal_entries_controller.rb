@@ -40,7 +40,7 @@ class JournalEntriesController < ApplicationController
 
       JournalEntryRevision.record!(
         entry: @entry, before: before_snapshot,
-        user: current_user, reason: params[:revision_reason]
+        user: current_user, reason: revision_reason_param
       )
     end
 
@@ -101,6 +101,10 @@ class JournalEntriesController < ApplicationController
 
   def set_client
     @client = Client.find_by!(code: @client_code)
+  end
+
+  def revision_reason_param
+    params.permit(:revision_reason)[:revision_reason]
   end
 
   def entry_params
