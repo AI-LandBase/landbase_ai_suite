@@ -32,6 +32,7 @@ class BankStatementProcessJob < ApplicationJob
             error_message: nil
           )
         end
+        rename_batch_pdf(batch, result.data)
       rescue ActiveRecord::RecordInvalid => e
         batch.update(status: "failed", error_message: "仕訳データの保存に失敗: #{e.message}")
       end

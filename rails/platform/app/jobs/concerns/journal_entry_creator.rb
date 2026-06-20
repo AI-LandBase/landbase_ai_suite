@@ -105,4 +105,55 @@ module JournalEntryCreator
       scope.where(journal_entry_lines: { partner: partner }).first
     end
   end
+
+  # AI処理成功後に batch.pdf の blob.filename を命名規約に揃える（ADR 0009-G）。
+  # blob 更新失敗は警告ログのみ。仕訳保存とは独立してトランザクション外で呼ぶこと。
+  def rename_batch_pdf(batch, data)
+    return unless batch.pdf.attached?
+
+    date, vendor, description, ext = extract_pdf_rename_parts(batch, data)
+    filename = StatementBatch.build_pdf_filename(date: date, vendor: vendor, description: description, ext: ext)
+    batch.pdf.blob.update!(filename: filename)
+  rescue => e
+    Rails.logger.warn("[PdfRenamer] batch #{batch.id}: #{e.message}")
+  end
+
+  def extract_pdf_rename_parts(batch, data)
+    ext = batch.pdf.filename.extension_without_delimiter
+    first_txn = data[:transactions]&.first || {}
+
+    case batch.source_type
+    when "amex"
+      date   = parse_statement_period_to_yyyymm(data[:statement_period])
+      vendor = "アメックス"
+      desc   = "明細"
+    when "bank"
+      date   = parse_statement_period_to_yyyymm(data[:statement_period])
+      vendor = first_txn[:debit_partner].to_s.presence || "銀行"
+      desc   = "明細"
+    when "invoice"
+      date   = data[:invoice_date].to_s
+      vendor = data[:vendor_name].to_s
+      desc   = first_txn[:description].to_s.presence || "請求書"
+    when "receipt"
+      date   = data[:receipt_date].to_s
+      vendor = data[:vendor_name].to_s.presence || first_txn[:debit_partner].to_s
+      desc   = first_txn[:description].to_s.presence || "領収書"
+    else
+      return ["000000", batch.source_type, "", ext]
+    end
+
+    [date, vendor, desc, ext]
+  end
+
+  def parse_statement_period_to_yyyymm(period)
+    return "000000" if period.blank?
+
+    # "2026年5月" → "202605"
+    if period =~ /(\d{4})年(\d{1,2})月/
+      format("%04d%02d", $1.to_i, $2.to_i)
+    else
+      period.gsub(/[^\d]/, "").first(6).presence || "000000"
+    end
+  end
 end
