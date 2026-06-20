@@ -29,8 +29,8 @@
         <div class="container mx-auto px-5 py-3 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <% if @sidebar_client %>
-              <button type="button" class="lg:hidden p-1 text-gray-400 hover:text-gray-100" data-action="click->sidebar#toggle">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              <button type="button" aria-label="メニューを開く" class="lg:hidden p-1 text-gray-400 hover:text-gray-100" data-action="click->sidebar#toggle">
+                <svg aria-hidden="true" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
               </button>
             <% end %>
             <%= link_to "AI Suite", root_path, class: "font-semibold text-gray-100 hover:text-gray-300 transition-colors" %>

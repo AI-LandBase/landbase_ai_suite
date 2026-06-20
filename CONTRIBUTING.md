@@ -716,6 +716,29 @@ export default class extends Controller {
 </div>
 ```
 
+### ビュー（アクセシビリティ）
+
+#### SVG アイコンの代替テキスト
+
+- **装飾目的のアイコン**（リンク/ボタンにテキストラベルが併記されている場合）には `aria-hidden="true"` を付与し、スクリーンリーダーから隠す。
+
+  ```erb
+  <%= link_to ... do %>
+    <svg aria-hidden="true" class="h-5 w-5" ...>...</svg>
+    <span>証憑を開く</span>
+  <% end %>
+  ```
+
+- **テキストラベルを持たない単独アイコン**（アイコンのみのボタン等）には、要素側に `aria-label` で代替テキストを付け、SVG 自体は `aria-hidden="true"` にする。
+
+  ```erb
+  <button type="button" aria-label="メニューを開く" ...>
+    <svg aria-hidden="true" class="w-6 h-6" ...>...</svg>
+  </button>
+  ```
+
+> 将来的にアイコンが増える場合は、`shared/_sidebar_icon.html.erb` のようなパーシャルを `icon` ヘルパーに集約し、`aria-hidden` を一元管理することを検討する。
+
 ### データベース
 
 #### 1. マイグレーション命名規則
