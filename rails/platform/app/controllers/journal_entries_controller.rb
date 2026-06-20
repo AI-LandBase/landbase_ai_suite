@@ -10,9 +10,11 @@ class JournalEntriesController < ApplicationController
   def index
     @source_type = params[:source_type] || ""
     @csv_export_status = params[:csv_export_status] || ""
+    @status_filter = params[:status] || ""
     scope = JournalEntry.for_client(@client_code).includes(:journal_entry_lines)
     scope = scope.by_source(@source_type) if @source_type.present?
     scope = apply_csv_export_filter(scope, @csv_export_status)
+    scope = apply_status_filter(scope, @status_filter)
     @entries = scope.order(date: :desc, transaction_no: :asc).page(params[:page]).per(25)
   end
 
@@ -47,6 +49,7 @@ class JournalEntriesController < ApplicationController
     entries = entries.by_source(params[:source_type]) if params[:source_type].present?
     entries = entries.where(statement_batch_id: params[:statement_batch_id]) if params[:statement_batch_id].present?
     entries = apply_csv_export_filter(entries, params[:csv_export_status])
+    entries = apply_status_filter(entries, params[:status])
     if params[:date_from].present? && params[:date_to].present?
       begin
         entries = entries.in_period(Date.parse(params[:date_from]), Date.parse(params[:date_to]))
@@ -66,6 +69,14 @@ class JournalEntriesController < ApplicationController
     case status
     when "unexported" then scope.csv_unexported
     when "exported"   then scope.csv_exported
+    else scope
+    end
+  end
+
+  def apply_status_filter(scope, status)
+    case status
+    when "review_required" then scope.review_required
+    when "ok"              then scope.where(status: "ok")
     else scope
     end
   end

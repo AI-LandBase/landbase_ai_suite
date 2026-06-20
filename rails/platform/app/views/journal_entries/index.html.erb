@@ -33,6 +33,15 @@
       </select>
       <p class="mt-1 text-xs text-gray-500">弥生CSV等でエクスポート済みの仕訳は「出力済み」になります</p>
     </div>
+    <div>
+      <label for="status" class="block text-sm font-medium text-gray-300 mb-1">ステータス</label>
+      <select name="status" id="status"
+              class="rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border">
+        <option value="">全て</option>
+        <option value="review_required" <%= "selected" if @status_filter == "review_required" %>>要確認のみ</option>
+        <option value="ok" <%= "selected" if @status_filter == "ok" %>>OKのみ</option>
+      </select>
+    </div>
     <%= render "shared/button", label: "検索", variant: :neutral, type: "submit" %>
     <div class="relative inline-block" data-controller="dropdown">
       <button type="button" data-action="click->dropdown#toggle" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors inline-flex items-center gap-1">

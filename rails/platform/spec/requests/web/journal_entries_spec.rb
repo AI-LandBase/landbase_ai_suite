@@ -66,6 +66,49 @@ RSpec.describe "Web::JournalEntries", type: :request do
         expect(response.body).to include("—")
       end
 
+      describe "status フィルタ" do
+        let!(:ok_entry) do
+          create(:journal_entry, client: client, status: "ok",
+                 debit_account: "旅費交通費", debit_amount: 1000, credit_amount: 1000)
+        end
+        let!(:review_entry) do
+          create(:journal_entry, client: client, status: "review_required",
+                 debit_account: "消耗品費", debit_amount: 2000, credit_amount: 2000)
+        end
+
+        it "review_required指定で要確認のみ表示すること" do
+          get journal_entries_path(client_code: client.code, status: "review_required")
+          expect(response.body).to include("消耗品費")
+          expect(response.body).not_to include("旅費交通費")
+        end
+
+        it "ok指定でOKのみ表示すること" do
+          get journal_entries_path(client_code: client.code, status: "ok")
+          expect(response.body).to include("旅費交通費")
+          expect(response.body).not_to include("消耗品費")
+        end
+
+        it "未指定で両方表示すること" do
+          get journal_entries_path(client_code: client.code)
+          expect(response.body).to include("旅費交通費")
+          expect(response.body).to include("消耗品費")
+        end
+
+        it "不正値は silent acceptance で全件表示すること" do
+          get journal_entries_path(client_code: client.code, status: "invalid")
+          expect(response.body).to include("旅費交通費")
+          expect(response.body).to include("消耗品費")
+        end
+
+        it "source_typeと併用できること" do
+          receipt_review = create(:journal_entry, :receipt, client: client, status: "review_required",
+                                  debit_account: "仕入高", debit_amount: 3000, credit_amount: 3000)
+          get journal_entries_path(client_code: client.code, status: "review_required", source_type: "receipt")
+          expect(response.body).to include("仕入高")
+          expect(response.body).not_to include("消耗品費")
+        end
+      end
+
       describe "クレジットカード警告ラベル" do
         before { create(:payment_card, client: client, last_four: "1234") }
 
@@ -277,6 +320,19 @@ RSpec.describe "Web::JournalEntries", type: :request do
 
         csv = CSV.parse(response.body.sub("\uFEFF", ""), headers: true)
         expect(csv.size).to eq(1)
+      end
+
+      it "status=review_requiredで要確認のみエクスポートできること" do
+        create(:journal_entry, client: client, status: "ok",
+               debit_account: "旅費交通費", debit_amount: 1000, credit_amount: 1000)
+        create(:journal_entry, client: client, status: "review_required",
+               debit_account: "消耗品費", debit_amount: 2000, credit_amount: 2000)
+
+        get export_journal_entries_path(client_code: client.code, status: "review_required", format_type: "csv")
+
+        csv = CSV.parse(response.body.sub("\uFEFF", ""), headers: true)
+        expect(csv.size).to eq(1)
+        expect(csv.first["借方勘定科目"]).to eq("消耗品費")
       end
     end
   end
