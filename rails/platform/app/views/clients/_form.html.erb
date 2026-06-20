@@ -22,11 +22,18 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-300 mb-1">業種</label>
-        <%= f.select :industry,
-              [["飲食業", "restaurant"], ["ホテル", "hotel"], ["ツアー", "tour"]],
-              { include_blank: "-- 選択してください --" },
-              class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
+        <label class="block text-sm font-medium text-gray-300 mb-2">業種（複数選択可）</label>
+        <%= f.hidden_field :industries, value: "" %>
+        <div class="space-y-2">
+          <% Client::INDUSTRY_LABELS.each do |code, label| %>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <%= check_box_tag "client[industries][]", code, @client.industry_codes.include?(code),
+                    id: "client_industries_#{code}",
+                    class: "rounded border-gray-600 text-teal-500 focus:ring-teal-500" %>
+              <span class="text-sm text-gray-300"><%= label %></span>
+            </label>
+          <% end %>
+        </div>
       </div>
 
       <div>

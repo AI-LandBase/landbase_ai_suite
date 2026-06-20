@@ -8,8 +8,8 @@
         <p class="text-sm font-mono text-gray-400 mt-1"><%= @client.code %></p>
       </div>
       <div class="flex items-center gap-3">
-        <% if @client.industry.present? %>
-          <span class="text-sm text-gray-400"><%= @client.industry %></span>
+        <% if @client.industry_codes.any? %>
+          <span class="text-sm text-gray-400"><%= @client.industry_codes.map { |c| Client::INDUSTRY_LABELS[c] }.compact.join(" / ") %></span>
         <% end %>
         <% if @client.status == "active" %>
           <%= render "shared/badge", label: @client.status_label, variant: :success, size: :md %>

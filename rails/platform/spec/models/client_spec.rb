@@ -65,6 +65,29 @@ RSpec.describe Client, type: :model do
         expect(subject.errors[:industry]).to be_present
       end
     end
+
+    describe "industries" do
+      it "空配列は有効" do
+        subject.industries = []
+        expect(subject).to be_valid
+      end
+
+      it "有効な業種コードの配列は有効" do
+        subject.industries = %w[restaurant hotel]
+        expect(subject).to be_valid
+      end
+
+      it "全業種コードの配列は有効" do
+        subject.industries = %w[restaurant hotel tour]
+        expect(subject).to be_valid
+      end
+
+      it "無効なコードが含まれる場合エラー" do
+        subject.industries = %w[restaurant invalid]
+        expect(subject).not_to be_valid
+        expect(subject.errors[:industries]).to be_present
+      end
+    end
   end
 
   describe "#to_param" do
@@ -160,25 +183,47 @@ RSpec.describe Client, type: :model do
     end
   end
 
+  describe "#industry_codes" do
+    it "industriesが設定されている場合はindustriesを返す" do
+      client = build(:client, industries: %w[restaurant hotel], industry: "restaurant")
+      expect(client.industry_codes).to eq(%w[restaurant hotel])
+    end
+
+    it "industriesが空の場合はindustryを1要素配列で返す" do
+      client = build(:client, industries: [], industry: "hotel")
+      expect(client.industry_codes).to eq(%w[hotel])
+    end
+
+    it "industriesもindustryもない場合は空配列を返す" do
+      client = build(:client, industries: [], industry: nil)
+      expect(client.industry_codes).to eq([])
+    end
+  end
+
   describe "#feature_available?" do
-    describe "業種デフォルト" do
-      it "hotelクライアントはcleaning_manualsが利用可能" do
-        client = build(:client, :hotel, services: {})
+    describe "業種デフォルト（industries利用）" do
+      it "hotel入りのクライアントはcleaning_manualsが利用可能" do
+        client = build(:client, industries: %w[hotel], industry: nil, services: {})
         expect(client.feature_available?(:cleaning_manuals)).to be true
       end
 
-      it "restaurantクライアントはcleaning_manualsが利用不可" do
-        client = build(:client, industry: "restaurant", services: {})
+      it "hotel+restaurantのマルチ業種はcleaning_manualsが利用可能（OR集約）" do
+        client = build(:client, industries: %w[restaurant hotel], industry: nil, services: {})
+        expect(client.feature_available?(:cleaning_manuals)).to be true
+      end
+
+      it "restaurant・tourのみはcleaning_manualsが利用不可" do
+        client = build(:client, industries: %w[restaurant tour], industry: nil, services: {})
         expect(client.feature_available?(:cleaning_manuals)).to be false
       end
 
-      it "tourクライアントはcleaning_manualsが利用不可" do
-        client = build(:client, industry: "tour", services: {})
-        expect(client.feature_available?(:cleaning_manuals)).to be false
+      it "industriesが空の場合はindustryにフォールバック" do
+        client = build(:client, :hotel, industries: [], services: {})
+        expect(client.feature_available?(:cleaning_manuals)).to be true
       end
 
       it "industry未設定のクライアントはcleaning_manualsが利用不可" do
-        client = build(:client, industry: nil, services: {})
+        client = build(:client, industries: [], industry: nil, services: {})
         expect(client.feature_available?(:cleaning_manuals)).to be false
       end
     end

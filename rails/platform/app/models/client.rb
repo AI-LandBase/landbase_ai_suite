@@ -6,6 +6,13 @@ class Client < ApplicationRecord
     "inactive" => "無効"
   }.freeze
 
+  INDUSTRY_CODES = %w[restaurant hotel tour].freeze
+  INDUSTRY_LABELS = {
+    "restaurant" => "飲食業",
+    "hotel"      => "ホテル",
+    "tour"       => "ツアー",
+  }.freeze
+
   INDUSTRY_FEATURES = {
     "hotel"      => %w[cleaning_manuals],
     "restaurant" => %w[],
@@ -24,7 +31,8 @@ class Client < ApplicationRecord
   validates :code, presence: true, uniqueness: true
   validates :name, presence: true
   validates :status, inclusion: { in: STATUSES.keys }
-  validates :industry, inclusion: { in: %w[restaurant hotel tour] }, allow_nil: true
+  validates :industry, inclusion: { in: INDUSTRY_CODES }, allow_nil: true
+  validate :industries_must_be_valid
 
   # === スコープ ===
   scope :active, -> { where(status: "active") }
@@ -46,12 +54,23 @@ class Client < ApplicationRecord
     STATUSES[status]
   end
 
+  def industry_codes
+    industries.presence || Array(industry)
+  end
+
   def feature_available?(feature)
     key = feature.to_s
     if services.key?(key)
       services[key]
     else
-      INDUSTRY_FEATURES.fetch(industry.to_s, []).include?(key)
+      industry_codes.any? { |code| INDUSTRY_FEATURES.fetch(code, []).include?(key) }
     end
+  end
+
+  private
+
+  def industries_must_be_valid
+    invalid = industries - INDUSTRY_CODES
+    errors.add(:industries, "に無効な値が含まれています: #{invalid.join(', ')}") if invalid.any?
   end
 end
