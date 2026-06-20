@@ -126,6 +126,34 @@ RSpec.describe "Web::JournalEntries", type: :request do
         expect(response.body).to include("テスト社")
         expect(response.body).to include("仕訳一覧")
       end
+
+      context "証憑（statement_batch.pdf）が添付されている場合" do
+        let(:batch) do
+          create(:statement_batch, :completed, client: client).tap do |b|
+            b.pdf.attach(
+              io: File.open(Rails.root.join("spec/fixtures/files/test_statement.pdf")),
+              filename: "test_statement.pdf",
+              content_type: "application/pdf"
+            )
+          end
+        end
+        let(:entry) { create(:journal_entry, client: client, statement_batch: batch) }
+
+        it "証憑へのリンクが表示されること" do
+          get journal_entry_path(entry, client_code: client.code)
+          expect(response.body).to include("証憑を開く")
+          expect(response.body).to include(rails_blob_path(batch.pdf, disposition: "inline"))
+        end
+      end
+
+      context "証憑が添付されていない場合" do
+        let(:entry) { create(:journal_entry, client: client, statement_batch: nil) }
+
+        it "証憑へのリンクが表示されないこと" do
+          get journal_entry_path(entry, client_code: client.code)
+          expect(response.body).not_to include("証憑を開く")
+        end
+      end
     end
   end
 

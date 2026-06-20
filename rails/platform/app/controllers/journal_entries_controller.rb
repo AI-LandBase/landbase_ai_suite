@@ -16,7 +16,9 @@ class JournalEntriesController < ApplicationController
   end
 
   def show
-    @entry = JournalEntry.for_client(@client_code).includes(:journal_entry_lines).find(params[:id])
+    @entry = JournalEntry.for_client(@client_code)
+                         .includes(:journal_entry_lines, statement_batch: { pdf_attachment: :blob })
+                         .find(params[:id])
   end
 
   def edit
