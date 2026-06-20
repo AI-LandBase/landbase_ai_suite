@@ -84,6 +84,7 @@ class ReceiptLineProcessJob < ApplicationJob
           create_journal_entries(batch, result.data)
           batch.update!(status: "completed", summary: result.data[:summary] || {})
         end
+        rename_batch_pdf(batch, result.data)
 
         @line_service.push(line_user_id, format_success_message(result.data))
       rescue DuplicateFound => e

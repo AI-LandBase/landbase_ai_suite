@@ -1,6 +1,21 @@
 class StatementBatch < ApplicationRecord
   STATUSES = %w[processing completed failed duplicate].freeze
 
+  VENDOR_MAX_LEN = 30
+  DESCRIPTION_MAX_LEN = 30
+
+  # ファイル名規約: YYYYMMDD_支払先_内容.ext（ADR 0009-G）
+  # date は "YYYY-MM-DD" / "YYYYMM" / "YYYYMMDD" のいずれでも可（ハイフンを除去して使用）。
+  def self.build_pdf_filename(date:, vendor:, description:, ext:)
+    sanitize = ->(s) { s.to_s.unicode_normalize(:nfc).gsub(/[\/\\\:\*\?"<>\|　]/, "_").gsub(/\s+/, "_").strip }
+    date_str   = date.to_s.gsub("-", "").first(8).presence || "000000"
+    vendor_str = sanitize.(vendor).first(VENDOR_MAX_LEN).presence
+    desc_str   = sanitize.(description).first(DESCRIPTION_MAX_LEN).presence
+    ext_str    = ext.to_s.sub(/\A\./, "").presence || "pdf"
+    parts      = [date_str, vendor_str, desc_str].compact
+    "#{parts.join("_")}.#{ext_str}"
+  end
+
   # 取り込み（new → attach → save）が失敗したときに raise する。cause_error に元例外を保持する。
   class IngestError < StandardError
     attr_reader :cause_error

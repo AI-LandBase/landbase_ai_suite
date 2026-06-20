@@ -106,6 +106,61 @@ RSpec.describe StatementBatch, type: :model do
     end
   end
 
+  describe ".build_pdf_filename (ADR 0009-G)" do
+    it "基本パターン: YYYYMMDD_支払先_内容.ext を返す" do
+      result = described_class.build_pdf_filename(
+        date: "2026-06-20", vendor: "サンプル商会", description: "消耗品費", ext: "pdf"
+      )
+      expect(result).to eq("20260620_サンプル商会_消耗品費.pdf")
+    end
+
+    it "YYYYMM形式の日付もそのまま使う" do
+      result = described_class.build_pdf_filename(
+        date: "202606", vendor: "アメックス", description: "明細", ext: "pdf"
+      )
+      expect(result).to eq("202606_アメックス_明細.pdf")
+    end
+
+    it "ファイル名禁止文字をアンダースコアに置換する" do
+      result = described_class.build_pdf_filename(
+        date: "20260620", vendor: "A/B社", description: "請求:書", ext: "pdf"
+      )
+      expect(result).to include("A_B社")
+      expect(result).to include("請求_書")
+    end
+
+    it "vendor・descriptionを30文字でトランケートする" do
+      long_vendor = "あ" * 40
+      result = described_class.build_pdf_filename(
+        date: "20260620", vendor: long_vendor, description: "内容", ext: "pdf"
+      )
+      parts = result.split("_")
+      expect(parts[1].length).to be <= 30
+    end
+
+    it "vendorが空の場合はdescriptionのみ付与する" do
+      result = described_class.build_pdf_filename(
+        date: "20260620", vendor: "", description: "明細", ext: "pdf"
+      )
+      expect(result).to eq("20260620_明細.pdf")
+    end
+
+    it "vendor・descriptionが両方空の場合は日付のみ" do
+      result = described_class.build_pdf_filename(
+        date: "20260620", vendor: "", description: "", ext: "pdf"
+      )
+      expect(result).to eq("20260620.pdf")
+    end
+
+    it "extにドットが付いていても正規化する" do
+      result = described_class.build_pdf_filename(
+        date: "20260620", vendor: "商会", description: "領収書", ext: ".jpg"
+      )
+      expect(result).to end_with(".jpg")
+      expect(result).not_to include("..jpg")
+    end
+  end
+
   describe ".ingest! (issue#302)" do
     let(:client) { create(:client) }
     let(:attachable) do
