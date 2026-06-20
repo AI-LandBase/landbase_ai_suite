@@ -13,12 +13,14 @@ class JournalEntriesController < ApplicationController
     scope = scope.by_source(@source_type) if @source_type.present?
     scope = apply_csv_export_filter(scope, @csv_export_status)
     @entries = scope.order(date: :desc, transaction_no: :asc).page(params[:page]).per(25)
+    @registered_last_fours = PaymentCard.where(client: @client).pluck(:last_four).to_set
   end
 
   def show
     @entry = JournalEntry.for_client(@client_code)
                          .includes(:journal_entry_lines, statement_batch: { pdf_attachment: :blob })
                          .find(params[:id])
+    @registered_last_fours = PaymentCard.where(client: @client).pluck(:last_four).to_set
   end
 
   def edit

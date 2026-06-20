@@ -87,7 +87,9 @@ Rails.application.routes.draw do
   end
 
   # Web UI
-  resources :clients
+  resources :clients do
+    resources :payment_cards, only: %i[create destroy]
+  end
   resources :cleaning_manuals, only: [ :index, :show, :new ]
   resources :cleaning_sessions, only: [ :new, :show ] do
     member do

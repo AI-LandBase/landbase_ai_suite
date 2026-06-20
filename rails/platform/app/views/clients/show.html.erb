@@ -59,4 +59,56 @@
     <% end %>
     <% end %>
   </div>
+
+  <%# クレカマスタ管理 %>
+  <div class="mt-8">
+    <%= render "shared/card" do %>
+      <h2 class="text-lg font-semibold text-gray-100 mb-4">クレジットカードマスタ</h2>
+      <p class="text-sm text-gray-400 mb-4">登録したカード末尾と一致する領収書仕訳に赤ラベルで警告表示します（AMEX明細との重複判断用）。</p>
+
+      <% cards = @client.payment_cards.order(:last_four) %>
+      <% if cards.any? %>
+        <ul class="space-y-2 mb-4">
+          <% cards.each do |card| %>
+            <li class="flex items-center justify-between py-2 px-3 bg-gray-800 rounded-md">
+              <div>
+                <span class="font-mono text-gray-100">****<%= card.last_four %></span>
+                <% if card.card_name.present? %>
+                  <span class="ml-2 text-sm text-gray-400">(<%= card.card_name %>)</span>
+                <% end %>
+              </div>
+              <%= button_to "削除",
+                    client_payment_card_path(@client, card),
+                    method: :delete,
+                    form: { data: { turbo_confirm: "末尾#{card.last_four}のカードを削除しますか？" } },
+                    class: "text-red-400 hover:text-red-300 text-sm bg-transparent border-0 p-0 cursor-pointer" %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-sm text-gray-500 mb-4">登録済みカードはありません。</p>
+      <% end %>
+
+      <%= form_with url: client_payment_cards_path(@client), method: :post, class: "flex items-end gap-3 flex-wrap" do |f| %>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">末尾4桁 <span class="text-red-400">*</span></label>
+          <%= f.text_field :last_four,
+                name: "payment_card[last_four]",
+                placeholder: "例: 1234",
+                maxlength: 4,
+                class: "w-24 rounded-md bg-gray-800 border-gray-600 text-gray-100 px-3 py-2 text-sm focus:border-teal-500 focus:ring-teal-500" %>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1">ラベル（任意）</label>
+          <%= f.text_field :card_name,
+                name: "payment_card[card_name]",
+                placeholder: "例: 法人AMEX",
+                maxlength: 50,
+                class: "w-40 rounded-md bg-gray-800 border-gray-600 text-gray-100 px-3 py-2 text-sm focus:border-teal-500 focus:ring-teal-500" %>
+        </div>
+        <%= f.submit "追加",
+              class: "px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700 transition-colors cursor-pointer" %>
+      <% end %>
+    <% end %>
+  </div>
 </div>

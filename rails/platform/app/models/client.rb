@@ -25,6 +25,7 @@ class Client < ApplicationRecord
   has_many :cleaning_manuals, dependent: :restrict_with_error
   has_many :cleaning_sessions, dependent: :restrict_with_error
   has_many :statement_batches, dependent: :restrict_with_error
+  has_many :payment_cards, dependent: :destroy
   has_many :line_followers, dependent: :destroy
 
   # === バリデーション ===

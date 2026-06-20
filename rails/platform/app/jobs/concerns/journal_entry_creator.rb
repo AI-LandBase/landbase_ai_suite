@@ -40,6 +40,7 @@ module JournalEntryCreator
         tag: txn[:tag] || batch.source_type,
         memo: txn[:memo] || "",
         cardholder: txn[:cardholder] || "",
+        card_last_four: txn[:card_last_four].to_s.presence&.slice(0, 4),
         status: force_review ? "review_required" : (txn[:status] || "ok"),
         journal_entry_lines_attributes: [
           {
