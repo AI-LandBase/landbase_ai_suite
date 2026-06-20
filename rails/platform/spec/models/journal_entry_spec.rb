@@ -111,6 +111,32 @@ RSpec.describe JournalEntry, type: :model do
     end
   end
 
+  describe "#revision_snapshot" do
+    let(:entry) do
+      create(:journal_entry, description: "テスト摘要", tag: "amex", memo: "メモ",
+             cardholder: "山田太郎", status: "ok",
+             debit_account: "旅費交通費", debit_amount: 5000,
+             credit_account: "未払金", credit_amount: 5000)
+    end
+
+    it "日本語ラベルをキーとしたフラットなスナップショットを返すこと" do
+      snap = entry.revision_snapshot
+
+      expect(snap["摘要"]).to eq("テスト摘要")
+      expect(snap["メモ"]).to eq("メモ")
+      expect(snap["カード利用者"]).to eq("山田太郎")
+      expect(snap["ステータス"]).to eq("OK")
+      expect(snap["借方_勘定科目"]).to eq("旅費交通費")
+      expect(snap["借方_金額"]).to eq("5000")
+      expect(snap["貸方_勘定科目"]).to eq("未払金")
+    end
+
+    it "ステータスは日本語ラベルに変換されること" do
+      entry.update!(status: "review_required")
+      expect(entry.revision_snapshot["ステータス"]).to eq("要確認")
+    end
+  end
+
   describe "複合仕訳" do
     it "3行以上の仕訳を作成できる" do
       client = create(:client)

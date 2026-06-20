@@ -144,9 +144,7 @@
               </td>
               <td class="sticky right-0 z-10 bg-gray-900 group-hover:bg-gray-800 px-3 py-2 text-right whitespace-nowrap space-x-1 border-l border-gray-700">
                 <%= link_to "詳細", journal_entry_path(entry, client_code: @client_code), class: "text-teal-400 hover:text-teal-300" %>
-                <% if entry.status == "review_required" %>
-                  <%= link_to "編集", edit_journal_entry_path(entry, client_code: @client_code), class: "text-amber-500 hover:text-amber-400" %>
-                <% end %>
+                <%= link_to "編集", edit_journal_entry_path(entry, client_code: @client_code), class: "text-amber-500 hover:text-amber-400" %>
                 <%= button_to "削除",
                       journal_entry_path(entry, client_code: @client_code),
                       method: :delete,

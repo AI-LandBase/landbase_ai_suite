@@ -25,10 +25,10 @@
     <div class="flex items-center gap-3">
       <% if @entry.status == "review_required" %>
         <%= render "shared/badge", label: "要確認", variant: :warning, size: :md %>
-        <%= render "shared/button", label: "編集", href: edit_journal_entry_path(@entry, client_code: @client_code), variant: :edit, class: "text-sm" %>
       <% else %>
         <%= render "shared/badge", label: "OK", variant: :success, size: :md %>
       <% end %>
+      <%= render "shared/button", label: "編集", href: edit_journal_entry_path(@entry, client_code: @client_code), variant: :edit, class: "text-sm" %>
       <%= render "shared/button",
             label: "削除",
             variant: :danger,
@@ -46,142 +46,198 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <!-- 基本情報 -->
-    <%= render "shared/card" do %>
-      <h2 class="text-lg font-semibold mb-4 border-b pb-2">基本情報</h2>
-      <dl class="space-y-3">
-        <div class="flex justify-between">
-          <dt class="text-sm text-gray-400">取引日</dt>
-          <dd class="text-sm font-medium"><%= @entry.date %></dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-sm text-gray-400">ソースタイプ</dt>
-          <dd class="text-sm font-medium"><%= @entry.source_type %></dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-sm text-gray-400">明細期間</dt>
-          <dd class="text-sm font-medium"><%= @entry.source_period %></dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-sm text-gray-400">カード利用者</dt>
-          <dd class="text-sm font-medium"><%= @entry.cardholder.presence || "-" %></dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-sm text-gray-400">タグ</dt>
-          <dd class="text-sm font-medium"><%= @entry.tag.presence || "-" %></dd>
-        </div>
-      </dl>
-    <% end %>
+  <div data-controller="tabs">
+    <%# タブナビ %>
+    <div class="flex border-b border-gray-700 mb-6">
+      <button type="button" data-tabs-target="tab" data-tab-name="detail" data-action="click->tabs#switch"
+              class="px-4 py-2 border-b-2 border-transparent text-sm font-medium text-gray-400 cursor-pointer">
+        仕訳詳細
+      </button>
+      <button type="button" data-tabs-target="tab" data-tab-name="history" data-action="click->tabs#switch"
+              class="px-4 py-2 border-b-2 border-transparent text-sm font-medium text-gray-400 cursor-pointer">
+        編集履歴 (<%= @revisions.size %>)
+      </button>
+    </div>
 
-    <!-- 摘要・メモ -->
-    <%= render "shared/card" do %>
-      <h2 class="text-lg font-semibold mb-4 border-b pb-2">摘要・メモ</h2>
-      <dl class="space-y-3">
-        <div>
-          <dt class="text-sm text-gray-400">摘要</dt>
-          <dd class="text-sm font-medium mt-1"><%= @entry.description.presence || "-" %></dd>
-        </div>
-        <div>
-          <dt class="text-sm text-gray-400">メモ</dt>
-          <dd class="text-sm font-medium mt-1"><%= @entry.memo.presence || "-" %></dd>
-        </div>
-      </dl>
-    <% end %>
-
-    <!-- 証憑 -->
-    <% if @entry.statement_batch&.pdf&.attached? %>
-      <%= render "shared/card" do %>
-        <h2 class="text-lg font-semibold mb-4 border-b pb-2">証憑</h2>
-        <%= link_to rails_blob_path(@entry.statement_batch.pdf, disposition: "inline"),
-              target: "_blank", rel: "noopener",
-              class: "inline-flex items-center gap-2 text-sm font-medium text-teal-400 hover:underline" do %>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <span>証憑を開く（<%= @entry.statement_batch.pdf.filename %>）</span>
+    <%# 仕訳詳細パネル %>
+    <div data-tabs-target="panel" data-tab-name="detail">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 基本情報 -->
+        <%= render "shared/card" do %>
+          <h2 class="text-lg font-semibold mb-4 border-b pb-2">基本情報</h2>
+          <dl class="space-y-3">
+            <div class="flex justify-between">
+              <dt class="text-sm text-gray-400">取引日</dt>
+              <dd class="text-sm font-medium"><%= @entry.date %></dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-sm text-gray-400">ソースタイプ</dt>
+              <dd class="text-sm font-medium"><%= @entry.source_type %></dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-sm text-gray-400">明細期間</dt>
+              <dd class="text-sm font-medium"><%= @entry.source_period %></dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-sm text-gray-400">カード利用者</dt>
+              <dd class="text-sm font-medium"><%= @entry.cardholder.presence || "-" %></dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-sm text-gray-400">タグ</dt>
+              <dd class="text-sm font-medium"><%= @entry.tag.presence || "-" %></dd>
+            </div>
+          </dl>
         <% end %>
-      <% end %>
-    <% end %>
 
-    <!-- 借方 -->
-    <%= render "shared/card" do %>
-      <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-teal-400">借方</h2>
-      <% @entry.debit_lines.each_with_index do |line, i| %>
-        <% if i > 0 %>
-          <hr class="my-3 border-gray-700">
+        <!-- 摘要・メモ -->
+        <%= render "shared/card" do %>
+          <h2 class="text-lg font-semibold mb-4 border-b pb-2">摘要・メモ</h2>
+          <dl class="space-y-3">
+            <div>
+              <dt class="text-sm text-gray-400">摘要</dt>
+              <dd class="text-sm font-medium mt-1"><%= @entry.description.presence || "-" %></dd>
+            </div>
+            <div>
+              <dt class="text-sm text-gray-400">メモ</dt>
+              <dd class="text-sm font-medium mt-1"><%= @entry.memo.presence || "-" %></dd>
+            </div>
+          </dl>
         <% end %>
-        <dl class="space-y-3">
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">勘定科目</dt>
-            <dd class="text-sm font-medium"><%= line.account %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">補助科目</dt>
-            <dd class="text-sm font-medium"><%= line.sub_account.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">部門</dt>
-            <dd class="text-sm font-medium"><%= line.department.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">取引先</dt>
-            <dd class="text-sm font-medium"><%= line.partner.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">税区分</dt>
-            <dd class="text-sm font-medium"><%= line.tax_category.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">インボイス</dt>
-            <dd class="text-sm font-medium"><%= line.invoice.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">金額</dt>
-            <dd class="text-lg font-bold text-teal-400"><%= number_with_delimiter(line.amount) %>円</dd>
-          </div>
-        </dl>
-      <% end %>
-    <% end %>
 
-    <!-- 貸方 -->
-    <%= render "shared/card" do %>
-      <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-red-700">貸方</h2>
-      <% @entry.credit_lines.each_with_index do |line, i| %>
-        <% if i > 0 %>
-          <hr class="my-3 border-gray-700">
+        <!-- 証憑 -->
+        <% if @entry.statement_batch&.pdf&.attached? %>
+          <%= render "shared/card" do %>
+            <h2 class="text-lg font-semibold mb-4 border-b pb-2">証憑</h2>
+            <%= link_to rails_blob_path(@entry.statement_batch.pdf, disposition: "inline"),
+                  target: "_blank", rel: "noopener",
+                  class: "inline-flex items-center gap-2 text-sm font-medium text-teal-400 hover:underline" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>証憑を開く（<%= @entry.statement_batch.pdf.filename %>）</span>
+            <% end %>
+          <% end %>
         <% end %>
-        <dl class="space-y-3">
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">勘定科目</dt>
-            <dd class="text-sm font-medium"><%= line.account %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">補助科目</dt>
-            <dd class="text-sm font-medium"><%= line.sub_account.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">部門</dt>
-            <dd class="text-sm font-medium"><%= line.department.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">取引先</dt>
-            <dd class="text-sm font-medium"><%= line.partner.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">税区分</dt>
-            <dd class="text-sm font-medium"><%= line.tax_category.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">インボイス</dt>
-            <dd class="text-sm font-medium"><%= line.invoice.presence || "-" %></dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-sm text-gray-400">金額</dt>
-            <dd class="text-lg font-bold text-red-700"><%= number_with_delimiter(line.amount) %>円</dd>
-          </div>
-        </dl>
+
+        <!-- 借方 -->
+        <%= render "shared/card" do %>
+          <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-teal-400">借方</h2>
+          <% @entry.debit_lines.each_with_index do |line, i| %>
+            <% if i > 0 %>
+              <hr class="my-3 border-gray-700">
+            <% end %>
+            <dl class="space-y-3">
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">勘定科目</dt>
+                <dd class="text-sm font-medium"><%= line.account %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">補助科目</dt>
+                <dd class="text-sm font-medium"><%= line.sub_account.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">部門</dt>
+                <dd class="text-sm font-medium"><%= line.department.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">取引先</dt>
+                <dd class="text-sm font-medium"><%= line.partner.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">税区分</dt>
+                <dd class="text-sm font-medium"><%= line.tax_category.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">インボイス</dt>
+                <dd class="text-sm font-medium"><%= line.invoice.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">金額</dt>
+                <dd class="text-lg font-bold text-teal-400"><%= number_with_delimiter(line.amount) %>円</dd>
+              </div>
+            </dl>
+          <% end %>
+        <% end %>
+
+        <!-- 貸方 -->
+        <%= render "shared/card" do %>
+          <h2 class="text-lg font-semibold mb-4 border-b pb-2 text-red-700">貸方</h2>
+          <% @entry.credit_lines.each_with_index do |line, i| %>
+            <% if i > 0 %>
+              <hr class="my-3 border-gray-700">
+            <% end %>
+            <dl class="space-y-3">
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">勘定科目</dt>
+                <dd class="text-sm font-medium"><%= line.account %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">補助科目</dt>
+                <dd class="text-sm font-medium"><%= line.sub_account.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">部門</dt>
+                <dd class="text-sm font-medium"><%= line.department.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">取引先</dt>
+                <dd class="text-sm font-medium"><%= line.partner.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">税区分</dt>
+                <dd class="text-sm font-medium"><%= line.tax_category.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">インボイス</dt>
+                <dd class="text-sm font-medium"><%= line.invoice.presence || "-" %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-sm text-gray-400">金額</dt>
+                <dd class="text-lg font-bold text-red-700"><%= number_with_delimiter(line.amount) %>円</dd>
+              </div>
+            </dl>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <%# 編集履歴パネル %>
+    <div data-tabs-target="panel" data-tab-name="history" class="hidden">
+      <% if @revisions.empty? %>
+        <p class="text-gray-400">編集履歴はまだありません。</p>
+      <% else %>
+        <ul class="space-y-4">
+          <% @revisions.each do |rev| %>
+            <li class="bg-gray-900 border border-gray-700 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-gray-300"><%= rev.created_at.in_time_zone.strftime("%Y-%m-%d %H:%M") %></span>
+                <span class="text-xs text-gray-500"><%= rev.editor_label %></span>
+              </div>
+              <% if rev.reason.present? %>
+                <p class="text-sm text-gray-400 mb-3">変更理由: <%= rev.reason %></p>
+              <% end %>
+              <table class="w-full text-xs">
+                <thead>
+                  <tr class="text-gray-500">
+                    <th class="text-left py-1 font-medium">項目</th>
+                    <th class="text-left py-1 font-medium">変更前</th>
+                    <th class="text-left py-1 font-medium">変更後</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% rev.changes_diff.each do |field, (before, after)| %>
+                    <tr class="border-t border-gray-800">
+                      <td class="py-1.5 pr-3 text-gray-300 whitespace-nowrap"><%= field %></td>
+                      <td class="py-1.5 pr-3 text-red-400"><%= before.presence || "（空）" %></td>
+                      <td class="py-1.5 text-teal-400"><%= after.presence || "（空）" %></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </li>
+          <% end %>
+        </ul>
       <% end %>
-    <% end %>
+    </div>
   </div>
 </div>

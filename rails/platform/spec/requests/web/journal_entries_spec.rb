@@ -359,6 +359,95 @@ RSpec.describe "Web::JournalEntries", type: :request do
         get edit_journal_entry_path(entry, client_code: client.code)
         expect(response.body).to include("テスト社")
       end
+
+      it "全ステータス（ok）でも詳細ページに編集ボタンが表示されること" do
+        ok_entry = create(:journal_entry, client: client, status: "ok")
+        get journal_entry_path(ok_entry, client_code: client.code)
+        expect(response.body).to include(edit_journal_entry_path(ok_entry, client_code: client.code))
+      end
+    end
+  end
+
+  describe "PATCH /journal_entries/:id (update)" do
+    let(:entry) do
+      create(:journal_entry, client: client, status: "ok", description: "元摘要",
+             debit_account: "旅費交通費", debit_amount: 5000,
+             credit_account: "未払金", credit_amount: 5000)
+    end
+
+    def update_params(description: "修正後の摘要", debit_amount: 5000, credit_amount: 5000, reason: nil)
+      {
+        journal_entry: {
+          description: description,
+          journal_entry_lines_attributes: {
+            "0" => { id: entry.debit_lines.first.id, side: "debit", account: "旅費交通費", amount: debit_amount },
+            "1" => { id: entry.credit_lines.first.id, side: "credit", account: "未払金", amount: credit_amount }
+          }
+        },
+        revision_reason: reason
+      }
+    end
+
+    context "未認証の場合" do
+      it "ログイン画面にリダイレクトすること" do
+        patch journal_entry_path(entry, client_code: client.code), params: update_params
+        expect(response).to redirect_to(new_user_session_path)
+      end
+    end
+
+    context "認証済みの場合" do
+      before { sign_in user }
+
+      it "編集成功で仕訳詳細にリダイレクトしリビジョンを記録すること" do
+        expect {
+          patch journal_entry_path(entry, client_code: client.code), params: update_params(reason: "摘要を訂正")
+        }.to change(JournalEntryRevision, :count).by(1)
+
+        expect(response).to redirect_to(journal_entry_path(entry, client_code: client.code))
+        expect(entry.reload.description).to eq("修正後の摘要")
+      end
+
+      it "変更理由と編集者を記録すること" do
+        patch journal_entry_path(entry, client_code: client.code), params: update_params(reason: "摘要を訂正")
+
+        rev = JournalEntryRevision.last
+        expect(rev.reason).to eq("摘要を訂正")
+        expect(rev.user).to eq(user)
+        expect(rev.changes_diff["摘要"]).to eq([ "元摘要", "修正後の摘要" ])
+      end
+
+      it "変更が無い場合はリビジョンを作成しないこと" do
+        expect {
+          patch journal_entry_path(entry, client_code: client.code), params: update_params(description: "元摘要")
+        }.not_to change(JournalEntryRevision, :count)
+      end
+
+      it "貸借不一致のバリデーションエラー時はリビジョンを作成せず422を返すこと" do
+        expect {
+          patch journal_entry_path(entry, client_code: client.code),
+                params: update_params(credit_amount: 3000)
+        }.not_to change(JournalEntryRevision, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(entry.reload.description).to eq("元摘要")
+      end
+    end
+  end
+
+  describe "GET /journal_entries/:id 履歴タブ" do
+    let(:entry) { create(:journal_entry, client: client) }
+
+    before { sign_in user }
+
+    it "リビジョンがある場合に履歴タブへ表示されること" do
+      create(:journal_entry_revision, journal_entry: entry, user: user,
+             changes_diff: { "摘要" => [ "旧", "新" ] }, reason: "テスト理由")
+
+      get journal_entry_path(entry, client_code: client.code)
+
+      expect(response.body).to include("編集履歴")
+      expect(response.body).to include("テスト理由")
+      expect(response.body).to include('data-controller="tabs"')
     end
   end
 
