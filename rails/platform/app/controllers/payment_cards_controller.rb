@@ -13,8 +13,11 @@ class PaymentCardsController < ApplicationController
 
   def destroy
     card = @client.payment_cards.find(params[:id])
-    card.destroy!
-    redirect_to client_path(@client), notice: "カード末尾を削除しました"
+    if card.destroy
+      redirect_to client_path(@client), notice: "カード末尾を削除しました"
+    else
+      redirect_to client_path(@client), alert: card.errors.full_messages.join(", ")
+    end
   end
 
   private

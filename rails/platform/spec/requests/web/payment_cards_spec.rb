@@ -48,6 +48,13 @@ RSpec.describe "Web::PaymentCards", type: :request do
   describe "DELETE /clients/:client_id/payment_cards/:id" do
     let!(:card) { create(:payment_card, client: client, last_four: "5678") }
 
+    context "未認証の場合" do
+      it "ログイン画面にリダイレクトすること" do
+        delete client_payment_card_path(client, card)
+        expect(response).to redirect_to(new_user_session_path)
+      end
+    end
+
     context "認証済みの場合" do
       before { sign_in user }
 

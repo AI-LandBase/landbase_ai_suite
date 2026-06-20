@@ -66,10 +66,9 @@
       <h2 class="text-lg font-semibold text-gray-100 mb-4">クレジットカードマスタ</h2>
       <p class="text-sm text-gray-400 mb-4">登録したカード末尾と一致する領収書仕訳に赤ラベルで警告表示します（AMEX明細との重複判断用）。</p>
 
-      <% cards = @client.payment_cards.order(:last_four) %>
-      <% if cards.any? %>
+      <% if @payment_cards.any? %>
         <ul class="space-y-2 mb-4">
-          <% cards.each do |card| %>
+          <% @payment_cards.each do |card| %>
             <li class="flex items-center justify-between py-2 px-3 bg-gray-800 rounded-md">
               <div>
                 <span class="font-mono text-gray-100">****<%= card.last_four %></span>
