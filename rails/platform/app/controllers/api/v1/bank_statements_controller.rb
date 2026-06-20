@@ -1,45 +1,10 @@
 module Api
   module V1
     class BankStatementsController < BaseController
-      MAX_PDF_SIZE = 20.megabytes
+      include PdfStatementProcessable
 
       def process_statement
-        pdf = params[:pdf]
-        return render_error("PDFファイルをアップロードしてください") if pdf.blank?
-
-        unless Marcel::MimeType.for(pdf.tempfile, name: pdf.original_filename) == "application/pdf"
-          return render_error("PDF形式のファイルのみ対応しています")
-        end
-
-        if pdf.size > MAX_PDF_SIZE
-          return render_error("PDFファイルは20MB以下にしてください")
-        end
-
-        fingerprint = Digest::SHA256.hexdigest(pdf.read)
-        pdf.rewind
-
-        unless ActiveModel::Type::Boolean.new.cast(params[:force])
-          existing = @current_client.statement_batches
-            .where(pdf_fingerprint: fingerprint, status: %w[processing completed])
-            .first
-          if existing
-            return render json: {
-              error: existing.status == "processing" ? "この明細は現在処理中です" : "この明細は処理済みです",
-              duplicate: true,
-              existing_batch_id: existing.id
-            }, status: :conflict
-          end
-        end
-
-        batch = StatementBatch.ingest!(
-          client: @current_client,
-          source_type: "bank",
-          fingerprint: fingerprint,
-          attachable: pdf
-        )
-
-        BankStatementProcessJob.perform_later(batch.id)
-        render json: { id: batch.id, status: "processing" }, status: :accepted
+        ingest_pdf_statement(source_type: "bank", job: BankStatementProcessJob, noun: "明細")
       end
 
       def status

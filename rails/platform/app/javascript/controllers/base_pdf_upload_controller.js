@@ -88,8 +88,6 @@ export default class extends Controller {
     this.showLoading()
     this.submitButtonTarget.disabled = true
 
-    const progressTab = window.open("about:blank", "_blank")
-
     const formData = new FormData()
     formData.append("pdf", this.file)
     formData.append("client_code", clientCode)
@@ -105,27 +103,17 @@ export default class extends Controller {
       const data = await response.json()
 
       if (response.status === 409 && data.duplicate) {
-        this.closeTab(progressTab)
-        this.hideLoading()
-        this.submitButtonTarget.disabled = false
-        if (confirm(`この${this.documentLabel}は既に処理済みです。再処理しますか？`)) {
-          await this.submitWithForce(formData)
-        }
+        this.showDuplicateError(data, formData)
         return
       }
 
       if (!response.ok) {
-        this.closeTab(progressTab)
         this.showError(data.error || `${this.documentLabel}の処理に失敗しました。`)
-        this.hideLoading()
-        this.submitButtonTarget.disabled = false
         return
       }
 
-      this.openProgressTab(progressTab, data.id)
-      this.resetForm()
+      this.navigateToBatch(data.id)
     } catch (error) {
-      this.closeTab(progressTab)
       this.showError(`通信エラー: ${error.message}`)
     } finally {
       this.hideLoading()
@@ -134,11 +122,11 @@ export default class extends Controller {
   }
 
   async submitWithForce(formData) {
+    this.hideError()
     this.showLoading()
     this.submitButtonTarget.disabled = true
 
-    const progressTab = window.open("about:blank", "_blank")
-    formData.append("force", "true")
+    formData.set("force", "true")
 
     try {
       const response = await fetch(this.uploadUrl, {
@@ -152,15 +140,12 @@ export default class extends Controller {
       const data = await response.json()
 
       if (!response.ok) {
-        this.closeTab(progressTab)
         this.showError(data.error || `${this.documentLabel}の処理に失敗しました。`)
         return
       }
 
-      this.openProgressTab(progressTab, data.id)
-      this.resetForm()
+      this.navigateToBatch(data.id)
     } catch (error) {
-      this.closeTab(progressTab)
       this.showError(`通信エラー: ${error.message}`)
     } finally {
       this.hideLoading()
@@ -168,26 +153,8 @@ export default class extends Controller {
     }
   }
 
-  openProgressTab(tab, batchId) {
-    const url = `/statement_batches/${batchId}`
-    if (tab) {
-      tab.location.href = url
-    } else {
-      window.location.href = url
-    }
-  }
-
-  closeTab(tab) {
-    if (tab) tab.close()
-  }
-
-  resetForm() {
-    this.file = null
-    this.fileInputTarget.value = ""
-    this.fileNameTarget.textContent = ""
-    this.fileNameTarget.classList.add("hidden")
-    this.submitButtonTarget.disabled = true
-    this.hideError()
+  navigateToBatch(batchId) {
+    window.location.href = `/statement_batches/${batchId}`
   }
 
   showLoading() {
@@ -199,11 +166,52 @@ export default class extends Controller {
   }
 
   showError(message) {
+    this.clearDuplicateActions()
     this.errorMessageTarget.textContent = message
     this.errorTarget.classList.remove("hidden")
   }
 
+  // 409 重複時: メッセージに加えて「処理済みバッチを開く」リンクと「再処理する」操作を提示する。
+  showDuplicateError(data, formData) {
+    this.errorMessageTarget.textContent =
+      `このファイルは既に処理済みです（バッチID ${data.existing_batch_id}）。`
+
+    this.clearDuplicateActions()
+
+    const actions = document.createElement("div")
+    actions.dataset.duplicateActions = ""
+    actions.className = "mt-3 flex items-center gap-4"
+
+    if (data.existing_batch_url) {
+      const link = document.createElement("a")
+      link.href = data.existing_batch_url
+      link.target = "_blank"
+      link.rel = "noopener"
+      link.textContent = "処理済みバッチを開く"
+      link.className = "text-teal-400 hover:underline text-sm font-medium"
+      actions.appendChild(link)
+    }
+
+    const reprocess = document.createElement("button")
+    reprocess.type = "button"
+    reprocess.textContent = "再処理する"
+    reprocess.className = "text-sm text-gray-300 hover:text-white underline"
+    reprocess.addEventListener("click", () => {
+      this.hideError()
+      this.submitWithForce(formData)
+    })
+    actions.appendChild(reprocess)
+
+    this.errorTarget.appendChild(actions)
+    this.errorTarget.classList.remove("hidden")
+  }
+
   hideError() {
+    this.clearDuplicateActions()
     this.errorTarget.classList.add("hidden")
+  }
+
+  clearDuplicateActions() {
+    this.errorTarget.querySelector("[data-duplicate-actions]")?.remove()
   }
 }
