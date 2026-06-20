@@ -47,6 +47,11 @@
       <p class="text-sm text-gray-400">請求書PDFをAIで仕訳データに変換</p>
     <% end %>
 
+    <%= render "shared/card", href: new_receipt_path(client_code: @client.code), hover: true do %>
+      <h2 class="text-lg font-semibold text-gray-100 mb-2">領収書処理</h2>
+      <p class="text-sm text-gray-400">領収書・レシート画像をAIで仕訳データに変換（複数同時可）</p>
+    <% end %>
+
     <% if @client.feature_available?(:cleaning_manuals) %>
     <%= render "shared/card", href: cleaning_manuals_path(client_code: @client.code), hover: true do %>
       <h2 class="text-lg font-semibold text-gray-100 mb-2">清掃マニュアル</h2>

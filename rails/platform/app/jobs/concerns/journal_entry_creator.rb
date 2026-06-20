@@ -21,6 +21,10 @@ module JournalEntryCreator
       raise DuplicateFound.new(existing) if existing
     end
 
+    # 領収書の項目別仕訳（1領収書を複数の勘定科目に分割）は AI の科目推定精度が落ちるため、
+    # 担当者レビューに回す。分割が発生した場合は全エントリを review_required にする（ADR 0009-F）。
+    force_review = batch.source_type == "receipt" && transactions.size > 1
+
     base_txn_no = batch.client.journal_entries
                        .where(source_type: batch.source_type, source_period: source_period)
                        .maximum(:transaction_no).to_i
@@ -36,7 +40,7 @@ module JournalEntryCreator
         tag: txn[:tag] || batch.source_type,
         memo: txn[:memo] || "",
         cardholder: txn[:cardholder] || "",
-        status: txn[:status] || "ok",
+        status: force_review ? "review_required" : (txn[:status] || "ok"),
         journal_entry_lines_attributes: [
           {
             side: "debit",

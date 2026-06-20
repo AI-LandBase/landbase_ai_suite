@@ -69,6 +69,15 @@ Rails.application.routes.draw do
         end
       end
 
+      resources :receipts, only: [] do
+        collection do
+          post :process_receipt
+        end
+        member do
+          get :status
+        end
+      end
+
       resources :journal_entries, only: [ :index, :show, :update ] do
         collection do
           get :export
@@ -88,6 +97,7 @@ Rails.application.routes.draw do
   resources :amex_statements, only: [ :new ]
   resources :bank_statements, only: [ :new ]
   resources :invoices, only: [ :new ]
+  resources :receipts, only: [ :new ]
   resources :statement_batches, only: [ :show, :destroy ]
   resources :journal_entries, only: [ :index, :show, :edit, :update, :destroy ] do
     collection do

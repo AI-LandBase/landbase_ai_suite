@@ -1,0 +1,67 @@
+<% content_for(:title) { "領収書処理" } %>
+
+<div class="w-full max-w-4xl mx-auto" data-controller="receipt-upload">
+  <h1 class="text-2xl font-bold mb-6">領収書・レシート → 仕訳台帳変換</h1>
+
+  <form data-receipt-upload-target="form" data-action="submit->receipt-upload#submit" class="space-y-6">
+    <div>
+      <label for="client_code" class="block text-sm font-medium text-gray-300 mb-1">クライアントコード <span class="text-red-400">*</span></label>
+      <input type="text" name="client_code" id="client_code" required
+             value="<%= params[:client_code] %>"
+             class="w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border"
+             data-receipt-upload-target="clientCode">
+    </div>
+
+    <!-- ドラッグ&ドロップエリア -->
+    <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-teal-500 transition-colors"
+         data-receipt-upload-target="dropZone"
+         data-action="dragover->receipt-upload#dragOver dragenter->receipt-upload#dragEnter dragleave->receipt-upload#dragLeave drop->receipt-upload#drop">
+      <input type="file" name="images[]" multiple accept="image/jpeg,image/png,image/webp"
+             class="hidden" data-receipt-upload-target="fileInput" data-action="change->receipt-upload#filesSelected">
+      <div class="space-y-2">
+        <svg aria-hidden="true" class="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="text-gray-400">
+          領収書画像をドラッグ&ドロップ、または
+          <button type="button" class="text-teal-400 hover:text-teal-300 font-medium" data-action="click->receipt-upload#openFileDialog">
+            ファイルを選択
+          </button>
+        </p>
+        <p class="text-xs text-gray-400">JPEG / PNG / WebP（1枚20MB以下・複数選択可）</p>
+      </div>
+    </div>
+
+    <!-- ファイル数表示 -->
+    <p class="text-sm text-gray-300" data-receipt-upload-target="fileCount">画像が選択されていません</p>
+
+    <!-- プレビュー -->
+    <div class="hidden grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3" data-receipt-upload-target="preview"></div>
+
+    <div class="flex items-center justify-end">
+      <button type="submit" data-receipt-upload-target="submitButton"
+              class="bg-teal-600 text-white px-6 py-2 rounded-md hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+              disabled>
+        仕訳変換を実行
+      </button>
+    </div>
+  </form>
+
+  <!-- ローディング -->
+  <div data-receipt-upload-target="loading" class="hidden mt-8 text-center">
+    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+    <p class="mt-2 text-gray-400" data-receipt-upload-target="loadingText">処理中...</p>
+  </div>
+
+  <!-- エラー表示 -->
+  <div data-receipt-upload-target="error" class="hidden mt-6 bg-red-950 border border-red-700 rounded-lg p-4">
+    <p class="text-red-300" data-receipt-upload-target="errorMessage"></p>
+  </div>
+
+  <!-- 処理結果一覧 -->
+  <div data-receipt-upload-target="result" class="hidden mt-8">
+    <h2 class="text-lg font-semibold mb-2 border-b border-gray-700 pb-2">処理結果</h2>
+    <ul data-receipt-upload-target="resultList"></ul>
+    <p class="text-xs text-gray-400 mt-3">「処理中」のものは AI 解析後に仕訳台帳へ反映されます。リンクから各バッチの状況を確認できます。</p>
+  </div>
+</div>
