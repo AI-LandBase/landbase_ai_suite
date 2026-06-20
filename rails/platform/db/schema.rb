@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_20_014648) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_20_032557) do
   create_schema "n8n"
 
   # These are extensions that must be enabled in order to support this database
@@ -326,6 +326,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_20_014648) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "exported_at", comment: "CSV出力日時（NULL=未出力）"
+    t.string "card_last_four"
     t.index ["client_id", "source_type", "source_period", "transaction_no"], name: "idx_journal_entries_unique_transaction", unique: true
     t.index ["client_id"], name: "index_journal_entries_on_client_id"
     t.index ["date"], name: "idx_journal_entries_date"
@@ -415,6 +416,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_20_014648) do
     t.index ["deleteat"], name: "idx_outgoing_webhook_delete_at"
     t.index ["teamid"], name: "idx_outgoing_webhook_team_id"
     t.index ["updateat"], name: "idx_outgoing_webhook_update_at"
+  end
+
+  create_table "payment_cards", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.string "last_four", null: false
+    t.string "card_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id", "last_four"], name: "index_payment_cards_on_client_id_and_last_four", unique: true
+    t.index ["client_id"], name: "index_payment_cards_on_client_id"
   end
 
   create_table "pluginkeyvaluestore", primary_key: ["pluginid", "pkey"], force: :cascade do |t|
@@ -784,5 +795,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_20_014648) do
   add_foreign_key "journal_entries", "statement_batches"
   add_foreign_key "journal_entry_lines", "journal_entries"
   add_foreign_key "line_followers", "clients"
+  add_foreign_key "payment_cards", "clients"
   add_foreign_key "statement_batches", "clients"
 end

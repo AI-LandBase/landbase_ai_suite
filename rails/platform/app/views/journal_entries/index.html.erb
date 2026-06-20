@@ -122,6 +122,11 @@
               <td class="px-3 py-2 text-gray-400 whitespace-nowrap"><%= entry.cardholder.presence || "—" %></td>
               <%# 右端固定列 %>
               <td class="sticky right-[4rem] z-10 bg-gray-900 group-hover:bg-gray-800 px-3 py-2 whitespace-nowrap border-l border-gray-700">
+                <% if entry.card_last_four.present? && @registered_last_fours.include?(entry.card_last_four) %>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-900 text-red-300 mr-1" title="末尾****#{entry.card_last_four}のカードが登録済みです。AMEX明細と重複する可能性があります。">
+                    クレカ警告
+                  </span>
+                <% end %>
                 <% if entry.status == "review_required" %>
                   <%= render "shared/badge", label: "要確認", variant: :warning %>
                 <% else %>

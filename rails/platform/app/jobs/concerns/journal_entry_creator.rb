@@ -40,6 +40,7 @@ module JournalEntryCreator
         tag: txn[:tag] || batch.source_type,
         memo: txn[:memo] || "",
         cardholder: txn[:cardholder] || "",
+        card_last_four: extract_card_last_four(txn[:card_last_four]),
         status: force_review ? "review_required" : (txn[:status] || "ok"),
         journal_entry_lines_attributes: [
           {
@@ -149,6 +150,14 @@ module JournalEntryCreator
     end
 
     [date, vendor, desc, ext]
+  end
+
+  def extract_card_last_four(raw)
+    str = raw.to_s.strip
+    return nil if str.blank?
+
+    digits = str[-4..]
+    digits&.match?(/\A\d{4}\z/) ? digits : nil
   end
 
   def parse_statement_period_to_yyyymm(period)

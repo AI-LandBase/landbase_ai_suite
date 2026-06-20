@@ -7,6 +7,7 @@ class ClientsController < ApplicationController
 
   def show
     @client = Client.find_by!(code: params[:id])
+    @payment_cards = @client.payment_cards.order(:last_four)
   end
 
   def new

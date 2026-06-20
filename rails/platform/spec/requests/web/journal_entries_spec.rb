@@ -66,6 +66,22 @@ RSpec.describe "Web::JournalEntries", type: :request do
         expect(response.body).to include("—")
       end
 
+      describe "クレジットカード警告ラベル" do
+        before { create(:payment_card, client: client, last_four: "1234") }
+
+        it "card_last_fourが登録済み末尾と一致する仕訳に赤ラベルを表示すること" do
+          create(:journal_entry, client: client, card_last_four: "1234")
+          get journal_entries_path(client_code: client.code)
+          expect(response.body).to include("クレカ警告")
+        end
+
+        it "card_last_fourが未登録末尾の場合は赤ラベルなし" do
+          create(:journal_entry, client: client, card_last_four: "9999")
+          get journal_entries_path(client_code: client.code)
+          expect(response.body).not_to include("クレカ警告")
+        end
+      end
+
       describe "csv_export_status フィルタ" do
         let!(:unexported_entry) do
           create(:journal_entry, client: client, exported_at: nil,
@@ -152,6 +168,29 @@ RSpec.describe "Web::JournalEntries", type: :request do
         it "証憑へのリンクが表示されないこと" do
           get journal_entry_path(entry, client_code: client.code)
           expect(response.body).not_to include("証憑を開く")
+        end
+      end
+
+      context "クレジットカード警告" do
+        before { create(:payment_card, client: client, last_four: "1234") }
+
+        it "card_last_fourが登録済み末尾と一致する場合に赤バナーを表示すること" do
+          entry_with_card = create(:journal_entry, client: client, card_last_four: "1234")
+          get journal_entry_path(entry_with_card, client_code: client.code)
+          expect(response.body).to include("クレジットカード重複警告")
+          expect(response.body).to include("****1234")
+        end
+
+        it "card_last_fourが未登録末尾の場合は警告なし" do
+          entry_no_match = create(:journal_entry, client: client, card_last_four: "9999")
+          get journal_entry_path(entry_no_match, client_code: client.code)
+          expect(response.body).not_to include("クレジットカード重複警告")
+        end
+
+        it "card_last_fourがnilの場合は警告なし" do
+          entry_no_card = create(:journal_entry, client: client, card_last_four: nil)
+          get journal_entry_path(entry_no_card, client_code: client.code)
+          expect(response.body).not_to include("クレジットカード重複警告")
         end
       end
     end

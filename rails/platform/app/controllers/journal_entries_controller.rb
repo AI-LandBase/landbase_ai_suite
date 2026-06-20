@@ -5,6 +5,7 @@ class JournalEntriesController < ApplicationController
 
   before_action :require_client_code
   before_action :set_client
+  before_action :set_registered_last_fours, only: %i[index show]
 
   def index
     @source_type = params[:source_type] || ""
@@ -86,6 +87,10 @@ class JournalEntriesController < ApplicationController
         :partner, :tax_category, :invoice, :amount, :_destroy
       ]
     )
+  end
+
+  def set_registered_last_fours
+    @registered_last_fours = PaymentCard.where(client: @client).pluck(:last_four).to_set
   end
 
   def record_not_found
