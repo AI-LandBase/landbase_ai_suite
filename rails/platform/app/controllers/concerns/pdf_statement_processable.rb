@@ -43,9 +43,11 @@ module PdfStatementProcessable
       attachable: pdf
     )
 
+    job.perform_later(batch.id)
+    # ジョブを確実にエンキューしてから、置き換え済みの failed バッチを掃除する
+    # （perform_later が失敗した場合は古い failed を残したまま例外送出）。
     cleanup_superseded_failed_batches(fingerprint)
 
-    job.perform_later(batch.id)
     render json: { id: batch.id, status: "processing" }, status: :accepted
   end
 

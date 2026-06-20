@@ -70,7 +70,7 @@ RSpec.describe "Api::V1::BankStatements", type: :request do
 
     context "重複PDF検知" do
       it "同一PDFが処理済みの場合409を返すこと" do
-        pdf_content = File.read(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
+        pdf_content = File.binread(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
         fingerprint = Digest::SHA256.hexdigest(pdf_content)
         create(:statement_batch, :completed, client: client, pdf_fingerprint: fingerprint)
 
@@ -84,7 +84,7 @@ RSpec.describe "Api::V1::BankStatements", type: :request do
       end
 
       it "409に処理済みバッチへのURLが含まれること (issue#307)" do
-        pdf_content = File.read(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
+        pdf_content = File.binread(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
         fingerprint = Digest::SHA256.hexdigest(pdf_content)
         existing = create(:statement_batch, :completed, client: client, pdf_fingerprint: fingerprint)
 
@@ -95,7 +95,7 @@ RSpec.describe "Api::V1::BankStatements", type: :request do
       end
 
       it "取り込み成功時に同一fingerprintのfailedバッチを掃除すること (issue#307)" do
-        pdf_content = File.read(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
+        pdf_content = File.binread(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
         fingerprint = Digest::SHA256.hexdigest(pdf_content)
         stale = create(:statement_batch, :failed, client: client, pdf_fingerprint: fingerprint)
 
@@ -107,7 +107,7 @@ RSpec.describe "Api::V1::BankStatements", type: :request do
 
       it "他テナントの同一fingerprintのfailedバッチは掃除しないこと (issue#307)" do
         other_client = create(:client, code: "other_client")
-        pdf_content = File.read(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
+        pdf_content = File.binread(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
         fingerprint = Digest::SHA256.hexdigest(pdf_content)
         other_stale = create(:statement_batch, :failed, client: other_client, pdf_fingerprint: fingerprint)
 
@@ -118,7 +118,7 @@ RSpec.describe "Api::V1::BankStatements", type: :request do
       end
 
       it "同一PDFが処理中の場合409を返すこと" do
-        pdf_content = File.read(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
+        pdf_content = File.binread(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
         fingerprint = Digest::SHA256.hexdigest(pdf_content)
         create(:statement_batch, :processing, client: client, pdf_fingerprint: fingerprint)
 
@@ -131,7 +131,7 @@ RSpec.describe "Api::V1::BankStatements", type: :request do
       end
 
       it "force: trueで重複チェックをスキップできること" do
-        pdf_content = File.read(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
+        pdf_content = File.binread(Rails.root.join("spec/fixtures/files/test_statement.pdf"))
         fingerprint = Digest::SHA256.hexdigest(pdf_content)
         create(:statement_batch, :completed, client: client, pdf_fingerprint: fingerprint)
 

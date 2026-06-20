@@ -121,6 +121,8 @@ export default class extends Controller {
     }
   }
 
+  // submit() で組み立てた formData（pdf / client_code を保持）をそのまま再利用する。
+  // append ではなく set を使い、再処理ボタン連打でも force が多重追加されないようにする。
   async submitWithForce(formData) {
     this.hideError()
     this.showLoading()
