@@ -112,10 +112,11 @@ module JournalEntryCreator
     return unless batch.pdf.attached?
 
     date, vendor, description, ext = extract_pdf_rename_parts(batch, data)
-    filename = StatementBatch.build_pdf_filename(date: date, vendor: vendor, description: description, ext: ext)
+    original  = batch.pdf.filename.to_s
+    filename  = StatementBatch.build_pdf_filename(date: date, vendor: vendor, description: description, ext: ext)
     batch.pdf.blob.update!(filename: filename)
-  rescue => e
-    Rails.logger.warn("[PdfRenamer] batch #{batch.id}: #{e.message}")
+  rescue ActiveRecord::ActiveRecordError, ActiveStorage::Error => e
+    Rails.logger.warn("[PdfRenamer] batch #{batch.id} rename failed (#{original.inspect} → #{filename.inspect}): #{e.class}: #{e.message}")
   end
 
   def extract_pdf_rename_parts(batch, data)
