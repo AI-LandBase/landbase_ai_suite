@@ -151,6 +151,15 @@
       </div>
     <% end %>
 
+    <!-- 変更理由（編集履歴に記録） -->
+    <%= render "shared/card" do %>
+      <h2 class="text-lg font-semibold mb-4">変更理由（任意）</h2>
+      <%= text_field_tag :revision_reason, nil,
+            placeholder: "例: 税区分を修正、勘定科目を訂正 など",
+            class: "w-full rounded-md border-gray-600 shadow-sm focus:border-teal-500 focus:ring-teal-500 px-3 py-2 border" %>
+      <p class="mt-2 text-xs text-gray-500">変更内容は編集履歴として記録されます。理由は任意です。</p>
+    <% end %>
+
     <div class="flex justify-end gap-4">
       <%= render "shared/button", label: "キャンセル", href: journal_entry_path(@entry, client_code: @client_code), variant: :secondary, size: :lg %>
       <%= f.submit "保存", class: "bg-teal-600 text-white px-6 py-2 rounded-md hover:bg-teal-700 transition-colors cursor-pointer" %>

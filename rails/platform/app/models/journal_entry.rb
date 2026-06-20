@@ -5,6 +5,7 @@ class JournalEntry < ApplicationRecord
   belongs_to :client
   belongs_to :statement_batch, optional: true
   has_many :journal_entry_lines, -> { order(:id) }, dependent: :destroy
+  has_many :revisions, class_name: "JournalEntryRevision", dependent: :destroy
   accepts_nested_attributes_for :journal_entry_lines, allow_destroy: true
 
   # === バリデーション ===
@@ -41,6 +42,37 @@ class JournalEntry < ApplicationRecord
 
   def simple_entry?
     journal_entry_lines.size == 2
+  end
+
+  STATUS_LABELS = { "ok" => "OK", "review_required" => "要確認" }.freeze
+
+  LINE_FIELD_LABELS = {
+    account: "勘定科目", sub_account: "補助科目", department: "部門",
+    partner: "取引先", tax_category: "税区分", invoice: "インボイス", amount: "金額"
+  }.freeze
+
+  # 編集履歴の差分計算・表示に使うフラットなスナップショット。
+  # 会計記録として読みやすいよう日本語ラベルをキーにする。
+  # NOTE: 複数行の借方/貸方は journal_entry_lines の order(:id) 順を前提に
+  # "借方N_..." のキーを採番する。将来ライン順序の並べ替え機能を入れる場合は
+  # position 等の明示的な順序カラムへ切り替えること（キーがズレて diff が崩れるため）。
+  def revision_snapshot
+    snapshot = {
+      "摘要" => description.to_s,
+      "タグ" => tag.to_s,
+      "メモ" => memo.to_s,
+      "カード利用者" => cardholder.to_s,
+      "ステータス" => STATUS_LABELS.fetch(status, status.to_s)
+    }
+    [ [ "借方", debit_lines ], [ "貸方", credit_lines ] ].each do |side_label, lines|
+      lines.each_with_index do |line, idx|
+        prefix = lines.size > 1 ? "#{side_label}#{idx + 1}" : side_label
+        LINE_FIELD_LABELS.each do |attr, field_label|
+          snapshot["#{prefix}_#{field_label}"] = line.public_send(attr).to_s
+        end
+      end
+    end
+    snapshot
   end
 
   # === CSVエクスポート ===

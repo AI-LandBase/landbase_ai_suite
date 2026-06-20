@@ -3,6 +3,9 @@
 .AppleDouble
 .LSOverride
 
+# Playwright MCP（ブラウザ確認時の一時スナップショット/ログ）
+.playwright-mcp/
+
 # Logs
 *.log
 *.tmp

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_20_032557) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_20_062736) do
   create_schema "n8n"
 
   # These are extensions that must be enabled in order to support this database
@@ -350,6 +350,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_20_032557) do
     t.datetime "updated_at", null: false
     t.index ["journal_entry_id", "side"], name: "idx_journal_entry_lines_entry_side"
     t.index ["journal_entry_id"], name: "index_journal_entry_lines_on_journal_entry_id"
+  end
+
+  create_table "journal_entry_revisions", force: :cascade do |t|
+    t.bigint "journal_entry_id", null: false
+    t.bigint "user_id"
+    t.jsonb "changes_diff", default: {}, null: false
+    t.jsonb "snapshot", default: {}, null: false
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["journal_entry_id", "created_at"], name: "idx_on_journal_entry_id_created_at_9c0965e380"
+    t.index ["journal_entry_id"], name: "index_journal_entry_revisions_on_journal_entry_id"
+    t.index ["user_id"], name: "index_journal_entry_revisions_on_user_id"
   end
 
   create_table "licenses", id: { type: :string, limit: 26 }, force: :cascade do |t|
@@ -794,6 +807,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_20_032557) do
   add_foreign_key "journal_entries", "clients"
   add_foreign_key "journal_entries", "statement_batches"
   add_foreign_key "journal_entry_lines", "journal_entries"
+  add_foreign_key "journal_entry_revisions", "journal_entries"
+  add_foreign_key "journal_entry_revisions", "users", on_delete: :nullify
   add_foreign_key "line_followers", "clients"
   add_foreign_key "payment_cards", "clients"
   add_foreign_key "statement_batches", "clients"
