@@ -104,6 +104,56 @@ RSpec.describe ReceiptProcessJob, type: :job do
     expect(entry.source_period).to eq("2026年3月")
   end
 
+  it "単一仕訳の場合はAIのstatusをそのまま使うこと（review_required強制なし）" do
+    described_class.perform_now(batch.id)
+    expect(JournalEntry.last.status).to eq("ok")
+  end
+
+  context "項目別仕訳（複数transaction）の場合（ADR 0009-F）" do
+    let(:mock_result_data) do
+      {
+        is_receipt: true,
+        receipt_date: "2026-03-01",
+        vendor_name: "イオン やんばる店",
+        total_amount: 3000,
+        tax_amount: 240,
+        has_invoice_number: false,
+        transactions: [
+          {
+            transaction_no: 1, date: "2026-03-01",
+            debit_account: "仕入高", debit_partner: "イオン やんばる店",
+            debit_tax_category: "課税仕入8%（軽減・非インボイス）", debit_invoice: "",
+            debit_amount: 2000,
+            credit_account: "現金", credit_amount: 2000,
+            description: "食材仕入", tag: "receipt", memo: "", status: "ok"
+          },
+          {
+            transaction_no: 2, date: "2026-03-01",
+            debit_account: "消耗品費", debit_partner: "イオン やんばる店",
+            debit_tax_category: "課税仕入10%（非インボイス）", debit_invoice: "",
+            debit_amount: 1000,
+            credit_account: "現金", credit_amount: 1000,
+            description: "清掃用品", tag: "receipt", memo: "", status: "ok"
+          }
+        ],
+        summary: { total_transactions: 2, total_amount: 3000, review_required_count: 0, accounts_breakdown: {} }
+      }
+    end
+
+    it "複数のJournalEntryを作成すること" do
+      expect {
+        described_class.perform_now(batch.id)
+      }.to change(JournalEntry, :count).by(2)
+    end
+
+    it "全エントリのstatusをreview_requiredに自動付与すること" do
+      described_class.perform_now(batch.id)
+
+      statuses = batch.reload.journal_entries.pluck(:status).uniq
+      expect(statuses).to eq(["review_required"])
+    end
+  end
+
   context "非領収書画像の場合（リトライ不要）" do
     let(:mock_result) do
       ReceiptProcessorService::Result.new(
