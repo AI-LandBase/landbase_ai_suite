@@ -4,9 +4,10 @@ class YayoiExportService
   SINGLE_ENTRY_FLAG = "2000"
   SINGLE_TYPE = "0"
 
-  TAX_CATEGORY_STANDARD = "課対仕入込10%"
-  TAX_CATEGORY_REDUCED  = "課対仕入込軽減8%"
-  TAX_CATEGORY_OUT      = "対象外"
+  TAX_CATEGORY_STANDARD          = "課対仕入込10%"
+  TAX_CATEGORY_REDUCED           = "課対仕入込軽減8%"
+  TAX_CATEGORY_NON_TAXABLE_SALES = "非課売上"
+  TAX_CATEGORY_OUT               = "対象外"
 
   def export_single_entry(entries)
     entries = entries.includes(:journal_entry_lines) if entries.respond_to?(:includes)
@@ -55,12 +56,17 @@ class YayoiExportService
     ]
   end
 
-  # クレカ明細等は適格／非適格の判定不能のため、すべて適格扱いで弥生の3区分に丸める。
+  # クレカ明細等は適格／非適格の判定不能のため、課税仕入はすべて適格扱いで弥生の課対仕入区分に丸める。
+  # 非課税「売上」（受取利息など）は弥生では「非課売上」が正しく、課税売上割合の按分計算に影響するため
+  # 「対象外」とは区別する。一方、非課税「仕入」・不課税・リバースチャージは弥生公式案内に従い「対象外」に集約する。
+  #   参考: https://support.yayoi-kk.co.jp/faq_Subcontents.html?page_id=27344
   # 空文字は弥生で「税区分なし」を意味するため、そのまま空文字で返す。
   def map_tax_category(raw)
     return "" if raw.blank?
 
-    if raw.include?("軽減") || raw.include?("8%")
+    if raw.include?("非課税売上") || raw.include?("非課売上")
+      TAX_CATEGORY_NON_TAXABLE_SALES
+    elsif raw.include?("軽減") || raw.include?("8%")
       TAX_CATEGORY_REDUCED
     elsif raw.include?("10%")
       TAX_CATEGORY_STANDARD
