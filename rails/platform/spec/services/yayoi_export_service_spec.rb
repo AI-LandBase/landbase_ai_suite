@@ -95,7 +95,7 @@ RSpec.describe YayoiExportService do
     end
   end
 
-  describe "税区分マッピング (適格扱い3区分への統一)" do
+  describe "税区分マッピング (弥生税区分への正規化)" do
     def build_entry(debit_tax:, credit_tax: "", date: Date.new(2026, 3, 1))
       create(:journal_entry, client: client, date: date,
              debit_account: "消耗品費", debit_tax_category: debit_tax, debit_amount: 1_000,
@@ -143,6 +143,16 @@ RSpec.describe YayoiExportService do
 
     it "「課対仕入（リバースチャージ）」を「対象外」に丸めること" do
       entry = build_entry(debit_tax: "課対仕入（リバースチャージ）")
+      expect(export_row(entry)[6]).to eq("対象外")
+    end
+
+    it "貸方の「非課税売上」を「非課売上」に変換すること（受取利息など。対象外とは区別）" do
+      entry = build_entry(debit_tax: "対象外", credit_tax: "非課税売上")
+      expect(export_row(entry)[13]).to eq("非課売上")
+    end
+
+    it "「非課税仕入」は「非課税売上」と誤判定せず「対象外」に丸めること" do
+      entry = build_entry(debit_tax: "非課税仕入")
       expect(export_row(entry)[6]).to eq("対象外")
     end
 
