@@ -23,7 +23,7 @@
 
       <div>
         <label class="block text-sm font-medium text-gray-300 mb-2">業種（複数選択可）</label>
-        <%= f.hidden_field :industries, value: "" %>
+        <%= hidden_field_tag "client[industries][]", "" %>
         <div class="space-y-2">
           <% Client::INDUSTRY_LABELS.each do |code, label| %>
             <label class="flex items-center gap-2 cursor-pointer">

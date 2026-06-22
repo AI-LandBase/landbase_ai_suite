@@ -50,10 +50,10 @@
       </button>
       <div data-dropdown-target="menu" class="hidden absolute right-0 mt-1 w-56 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-30">
         <%= link_to "CSV（従来形式）",
-              export_journal_entries_path(client_code: @client_code, source_type: @source_type.presence, csv_export_status: @csv_export_status.presence, format_type: "csv"),
+              export_journal_entries_path(client_code: @client_code, source_type: @source_type.presence, csv_export_status: @csv_export_status.presence, status: @status_filter.presence, format_type: "csv"),
               class: "block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700" %>
         <%= link_to "弥生会計（単一仕訳）",
-              export_journal_entries_path(client_code: @client_code, source_type: @source_type.presence, csv_export_status: @csv_export_status.presence, format_type: "yayoi_single"),
+              export_journal_entries_path(client_code: @client_code, source_type: @source_type.presence, csv_export_status: @csv_export_status.presence, status: @status_filter.presence, format_type: "yayoi_single"),
               class: "block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700" %>
       </div>
     </div>
@@ -132,7 +132,7 @@
               <%# 右端固定列 %>
               <td class="sticky right-[4rem] z-10 bg-gray-900 group-hover:bg-gray-800 px-3 py-2 whitespace-nowrap border-l border-gray-700">
                 <% if entry.card_last_four.present? && @registered_last_fours.include?(entry.card_last_four) %>
-                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-900 text-red-300 mr-1" title="末尾****#{entry.card_last_four}のカードが登録済みです。AMEX明細と重複する可能性があります。">
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-900 text-red-300 mr-1" title="末尾****<%= entry.card_last_four %>のカードが登録済みです。AMEX明細と重複する可能性があります。">
                     クレカ警告
                   </span>
                 <% end %>
