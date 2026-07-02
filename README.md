@@ -199,6 +199,9 @@ landbase_ai_suite/
 - [0005: マルチテナント戦略](./docs/adr/0005-multitenancy-strategy.md)
 - [0006: Platform 基幹アプリ分離](./docs/adr/0006-platform-app-separation.md)
 - [0007: Caddy リバースプロキシ](./docs/adr/0007-caddy-reverse-proxy-multi-domain.md)
+- [0008: リポジトリ分割](./docs/adr/0008-repository-split.md)（撤回）
+- [0009: AccountingAI 機能拡張のスコープと優先順位（2026-06）](./docs/adr/0009-accounting-feature-scope-2026-06.md)
+- [0010: parijona 向け AccountingAI を fork で独立進化させる](./docs/adr/0010-fork-for-parijona-accounting-ai.md) — parijona 向け開発は fork 先リポで行う
 
 ---
 

@@ -268,6 +268,7 @@ GET /api/v1/cleaning_manuals/:id/status
 - [ADR 0007: Caddy リバースプロキシ](./docs/adr/0007-caddy-reverse-proxy-multi-domain.md)
 - [ADR 0008: リポジトリ分割（landbase_ai_suite / AccountingAI / service_core）](./docs/adr/0008-repository-split.md)
 - [ADR 0009: AccountingAI 機能拡張のスコープと優先順位（2026-06）](./docs/adr/0009-accounting-feature-scope-2026-06.md)
+- [ADR 0010: parijona 向け AccountingAI を fork で独立進化させる](./docs/adr/0010-fork-for-parijona-accounting-ai.md) — parijona 向け開発は fork 先リポで行う
 
 ---
 
